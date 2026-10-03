@@ -16,6 +16,9 @@ importers:
       '@noble/hashes':
         specifier: ^2.4.0
         version: 2.4.0
+      '@solana-program/token':
+        specifier: ^0.17.0
+        version: 0.17.0(@solana/kit@8.4.0(typescript@5.9.3))
       '@solana/kit':
         specifier: ^8.4.0
         version: 8.4.0(typescript@5.9.3)
@@ -35,6 +38,42 @@ importers:
       codama:
         specifier: ^1.11.0
         version: 1.11.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@24.19.1)(vite@8.3.2(@types/node@24.19.1))
+
+  tests:
+    devDependencies:
+      '@opaq/sdk':
+        specifier: workspace:^
+        version: link:../packages/sdk
+      '@solana-program/system':
+        specifier: ^0.15.0
+        version: 0.15.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana-program/token':
+        specifier: ^0.17.0
+        version: 0.17.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana-program/token-2022':
+        specifier: ^0.19.0
+        version: 0.19.0(@solana/kit@8.4.0(typescript@5.9.3))(@solana/sysvars@8.4.0(typescript@5.9.3))(@solana/zk-sdk@0.5.3)
+      '@solana/kit':
+        specifier: ^8.4.0
+        version: 8.4.0(typescript@5.9.3)
+      '@solana/surfpool':
+        specifier: ^1.6.0
+        version: 1.6.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana/sysvars':
+        specifier: ^8.4.0
+        version: 8.4.0(typescript@5.9.3)
+      '@solana/zk-sdk':
+        specifier: ^0.5.1
+        version: 0.5.3
+      '@types/node':
+        specifier: ^24
+        version: 24.19.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -193,6 +232,41 @@ packages:
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@solana-program/record@0.5.0':
+    resolution: {integrity: sha512-Hie4a3hJhyk0ER2O+T2YQFBRB69xraIcmH/U5S/DOGv6ig3DMsPCO1Jqt6+0BZ/fS+vHouX/wededWTviLEm7A==}
+    peerDependencies:
+      '@solana/kit': ^8.3.0
+
+  '@solana-program/system@0.14.1':
+    resolution: {integrity: sha512-K6ZiIrAKoJAfcwfUdsoFvfSAxeRJaRrV7BPFTJvUVRS4m3zszN+nLcdaNMMe2F1/zTriZqC+xh+Kgw6ziGUqpQ==}
+    peerDependencies:
+      '@solana/kit': ^8.0.0
+
+  '@solana-program/system@0.15.0':
+    resolution: {integrity: sha512-xE08wZCyNRhOaO/XNRd9A3kSLfUrTe/BnmAHhql8uqc2eriNy2ZmnvaGRrs0m+kOSihvUbANzHljmJsTzGL5kg==}
+    peerDependencies:
+      '@solana/kit': ^8.3.0
+
+  '@solana-program/token-2022@0.19.0':
+    resolution: {integrity: sha512-oCCko/n8X6ote2A27HyNpCOIpksiHUnndQQ5wUr2pRm89rrfcKOvRd/zhIXW8z8tpemlPYp05XYUGFBo0GxhBg==}
+    peerDependencies:
+      '@solana/kit': ^8.3.0
+      '@solana/sysvars': ^8.0.0
+      '@solana/zk-sdk': ^0.5.1
+    peerDependenciesMeta:
+      '@solana/zk-sdk':
+        optional: true
+
+  '@solana-program/token@0.17.0':
+    resolution: {integrity: sha512-l7EhF3lCWXXdOllGI8qnbF4Pj7pCT/5zJTW2lPsNUQfa7G28pnFhSssHW2GCW7dzGttSHgPdJYdQRB5rvQoN9Q==}
+    peerDependencies:
+      '@solana/kit': ^8.3.0
+
+  '@solana-program/zk-elgamal-proof@0.4.0':
+    resolution: {integrity: sha512-bf2Q3f25xcCNaLm/MR4lwoAguJzEW2eeLdrJb6rUjMcA63qcgyJOWl6To7Bn4e+0OyWBa+J7YP2BUhi//VPz3g==}
+    peerDependencies:
+      '@solana/kit': ^8.0.0
 
   '@solana/accounts@8.4.0':
     resolution: {integrity: sha512-YklERWeG5UD2fzxR0zwWgzCVyuHRqg6eTIyGBAe8hOWIim8TYS1aPBVFAlVkSZiAXaFRxmu1E3IRfeCe/QSQmg==}
@@ -540,6 +614,39 @@ packages:
       typescript:
         optional: true
 
+  '@solana/surfpool-darwin-arm64@1.6.0':
+    resolution: {integrity: sha512-Co6xm8eM+lQVBU80sFgT7RQQ5a3D5FyJSDjwqzASf4qwb/A5QajcphYTp4xmf70lYVY/sCbrXf6iJF6URhyD9g==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@solana/surfpool-darwin-x64@1.6.0':
+    resolution: {integrity: sha512-Y/t/klvN3Sn2uckJEXbnTp6vxNwkn1Nl8cR9Ah4Ex1lKKXCEydLLU4LwRkAvkXn6ajArZPJ3yWb9QwUn8IQPdA==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@solana/surfpool-linux-x64-gnu@1.6.0':
+    resolution: {integrity: sha512-TqWpupKOLKbazTeEnKaExTU3Yk9+kAfjjwsDnWB7jak8ceO969BaMLcFGqWSaeqIV3TPr+wHYqnNaV1BtStucg==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [linux]
+
+  '@solana/surfpool@1.6.0':
+    resolution: {integrity: sha512-d1KNfHv0ujI4Fd0CLRFEfz8Kzb3aQdhS5F4586+Vk++Zeaax+fdrPUoQrI/AORjsUn0mWee508RxNLs7sUk/LA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@solana/kit': ^8.0.0
+      '@solana/kit-plugin-rpc': ^0.18.0
+      '@solana/kit-plugin-signer': ^0.18.0
+    peerDependenciesMeta:
+      '@solana/kit':
+        optional: true
+      '@solana/kit-plugin-rpc':
+        optional: true
+      '@solana/kit-plugin-signer':
+        optional: true
+
   '@solana/sysvars@8.4.0':
     resolution: {integrity: sha512-M2Wk70cji0n0muwHuZiPpDLeRy3Iq19FSOCNQPC/VL5Bg4Ltm7G9PXPvX4/TEODfFGgOLGja4rZmFlECl7tlXg==}
     engines: {node: '>=20.18.0'}
@@ -584,6 +691,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  '@solana/zk-sdk@0.5.3':
+    resolution: {integrity: sha512-vgne1g223Yw7AIgEfX5WnhBZ1gTyYjMzXu/fkXl/yimYSPOJZvn54UI4J/OrxwHGgxfsG6Rs+hUR6ovfPIX6Yg==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -1130,6 +1240,40 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
+  '@solana-program/record@0.5.0(@solana/kit@8.4.0(typescript@5.9.3))':
+    dependencies:
+      '@solana-program/system': 0.15.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana/kit': 8.4.0(typescript@5.9.3)
+
+  '@solana-program/system@0.14.1(@solana/kit@8.4.0(typescript@5.9.3))':
+    dependencies:
+      '@solana/kit': 8.4.0(typescript@5.9.3)
+
+  '@solana-program/system@0.15.0(@solana/kit@8.4.0(typescript@5.9.3))':
+    dependencies:
+      '@solana/kit': 8.4.0(typescript@5.9.3)
+
+  '@solana-program/token-2022@0.19.0(@solana/kit@8.4.0(typescript@5.9.3))(@solana/sysvars@8.4.0(typescript@5.9.3))(@solana/zk-sdk@0.5.3)':
+    dependencies:
+      '@noble/curves': 2.4.0
+      '@solana-program/record': 0.5.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana-program/system': 0.15.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana-program/zk-elgamal-proof': 0.4.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana/kit': 8.4.0(typescript@5.9.3)
+      '@solana/sysvars': 8.4.0(typescript@5.9.3)
+    optionalDependencies:
+      '@solana/zk-sdk': 0.5.3
+
+  '@solana-program/token@0.17.0(@solana/kit@8.4.0(typescript@5.9.3))':
+    dependencies:
+      '@solana-program/system': 0.15.0(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana/kit': 8.4.0(typescript@5.9.3)
+
+  '@solana-program/zk-elgamal-proof@0.4.0(@solana/kit@8.4.0(typescript@5.9.3))':
+    dependencies:
+      '@solana-program/system': 0.14.1(@solana/kit@8.4.0(typescript@5.9.3))
+      '@solana/kit': 8.4.0(typescript@5.9.3)
+
   '@solana/accounts@8.4.0(typescript@5.9.3)':
     dependencies:
       '@solana/addresses': 8.4.0(typescript@5.9.3)
@@ -1540,6 +1684,22 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
+  '@solana/surfpool-darwin-arm64@1.6.0':
+    optional: true
+
+  '@solana/surfpool-darwin-x64@1.6.0':
+    optional: true
+
+  '@solana/surfpool-linux-x64-gnu@1.6.0':
+    optional: true
+
+  '@solana/surfpool@1.6.0(@solana/kit@8.4.0(typescript@5.9.3))':
+    optionalDependencies:
+      '@solana/kit': 8.4.0(typescript@5.9.3)
+      '@solana/surfpool-darwin-arm64': 1.6.0
+      '@solana/surfpool-darwin-x64': 1.6.0
+      '@solana/surfpool-linux-x64-gnu': 1.6.0
+
   '@solana/sysvars@8.4.0(typescript@5.9.3)':
     dependencies:
       '@solana/accounts': 8.4.0(typescript@5.9.3)
@@ -1621,6 +1781,8 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
+
+  '@solana/zk-sdk@0.5.3': {}
 
   '@types/chai@5.2.3':
     dependencies:

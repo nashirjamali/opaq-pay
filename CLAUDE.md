@@ -75,6 +75,18 @@ JS workspaces:
   from `target/idl` (run after `anchor build` whenever a program's interface changes). Generated code
   is committed; never edit it by hand.
 - `pnpm --filter @opaq/sdk test` – vitest; `typecheck`, `build` likewise
+- `pnpm test:integration` – `anchor build`, then the Surfpool suite in `tests/`
+
+## Integration tests (`tests/`)
+
+- Embedded Surfpool (`@solana/surfpool`, offline, dynamic ports): `startTestNet()` in `tests/helpers.ts`
+  deploys both programs from `target/deploy`, so run `anchor build` first. The SDK is imported from
+  source via a vitest alias (no SDK build needed).
+- The network is offline, so tests create their own USDC stand-in (classic SPL mint) and the
+  Token-2022 wrapper mint with Confidential Transfer.
+- `full-flow.test.ts` covers vault setup → register handle → pay → scan announcements from the real
+  transaction → sweep (relayer pays fees, rent comes back) → withdraw 1:1, plus a forged sweep.
+- Suites run serially (`fileParallelism: false`); each file starts its own surfnet.
 
 ## SDK (`packages/sdk`)
 
@@ -82,6 +94,14 @@ JS workspaces:
   spend scalar, ed25519 signing from a raw scalar. Spec + test vector: `docs/stealth-address-spec.md`.
   Any change to derivation or domain tags needs a version bump, a new vector, and review.
 - `src/signer.ts` – `createStealthSigner(scalar)`: Kit `TransactionPartialSigner` for sweeps.
+- `src/builders.ts` – instruction builders for the flow; they return instructions only, callers pick
+  fee payer and send:
+  - `getRegisterHandleInstruction`, `fetchMetaAddress(rpc, name)`
+  - `getPayToMetaAddressInstructions` – create stealth ATA (payer pays rent) + `transferChecked` +
+    `announce`, in one transaction
+  - `decodeAnnouncementEventCpi` (untrusted chain data → `Announcement | null`), `findOwnPayments`
+  - `fetchVaultSettings(rpc)`, `getSweepToVaultInstructions` – `deposit` signed by the stealth signer,
+    then close the stealth ATA with rent to `rentRecipient` (relayer). Fee payer = relayer.
 - `src/generated/{registry,vault}` – Codama clients, exported as `registry` and `vault`.
 
 ## Programs
