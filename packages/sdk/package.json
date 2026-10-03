@@ -1,0 +1,37 @@
+{
+  "name": "@opaq/sdk",
+  "version": "0.1.0",
+  "description": "Opaq SDK: private stablecoin payments on Solana",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "codegen": "node scripts/codegen.mjs",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@solana/kit": "^8.4.0",
+    "@solana/program-client-core": "^8.4.0"
+  },
+  "devDependencies": {
+    "@codama/nodes-from-anchor": "^1.5.6",
+    "@codama/renderers-js": "^2.5.0",
+    "@types/node": "^24",
+    "codama": "^1.11.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}

@@ -68,7 +68,21 @@ Programs (Anchor 1.1.2, Solana CLI 3.1.x, Rust toolchain pinned in `rust-toolcha
   `target/deploy`. Program keypairs are gitignored; a fresh clone gets new local IDs from
   `anchor build` — do not commit ID changes made only for local testing.
 
-JS workspaces (not scaffolded yet): `pnpm install`, `pnpm --filter <package> dev|build|test`.
+JS workspaces:
+
+- `pnpm install` – install all workspaces
+- `pnpm --filter @opaq/sdk codegen` – regenerate program clients into `packages/sdk/src/generated/`
+  from `target/idl` (run after `anchor build` whenever a program's interface changes). Generated code
+  is committed; never edit it by hand.
+- `pnpm --filter @opaq/sdk test` – vitest; `typecheck`, `build` likewise
+
+## SDK (`packages/sdk`)
+
+- `src/stealth.ts` – stealth address scheme: meta keys, payer derivation, recipient scanning,
+  spend scalar, ed25519 signing from a raw scalar. Spec + test vector: `docs/stealth-address-spec.md`.
+  Any change to derivation or domain tags needs a version bump, a new vector, and review.
+- `src/signer.ts` – `createStealthSigner(scalar)`: Kit `TransactionPartialSigner` for sweeps.
+- `src/generated/{registry,vault}` – Codama clients, exported as `registry` and `vault`.
 
 ## Programs
 
