@@ -1,0 +1,19 @@
+[toolchain]
+package_manager = "pnpm"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+opaq_registry = "DaqD6ZznS3TP1NbC2tPrUiBjMNwPbJR3GseHZsBXABNk"
+opaq_vault = "9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "cargo test"
+
+[hooks]

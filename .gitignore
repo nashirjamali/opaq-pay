@@ -1,0 +1,27 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+.next/
+out/
+target/
+.anchor/
+test-ledger/
+.turbo/
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*-keypair.json
+id.json
+
+# misc
+.DS_Store
+*.log
+coverage/
+.surfpool/
