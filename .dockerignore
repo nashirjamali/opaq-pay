@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+target
+.anchor
+test-ledger
+.surfpool
+**/*-keypair.json
+**/id.json
+.env
+.env.*
+.git
