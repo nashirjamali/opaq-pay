@@ -6,6 +6,9 @@ pub const CONFIG_SEED: &[u8] = b"config";
 #[constant]
 pub const VAULT_SEED: &[u8] = b"vault";
 
+#[constant]
+pub const PENDING_ADMIN_SEED: &[u8] = b"pending_admin";
+
 pub const BPS_DENOMINATOR: u64 = 10_000;
 
 /// Hard cap on the protocol fee: 1%.

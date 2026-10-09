@@ -6,14 +6,23 @@ use anchor_spl::{
     token_interface::{get_mint_extension_data, Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{constants::*, error::VaultError, events::ConfigInitialized, state::*};
+use crate::{
+    constants::*, error::VaultError, events::ConfigInitialized, program::OpaqVault, state::*,
+};
 
 /// The wrapper mint is created client-side (Token-2022 + Confidential Transfer
 /// extension) with the config PDA as mint authority, then handed to this instruction.
+///
+/// Only the program's upgrade authority can initialise, so nobody can front-run a fresh
+/// deployment and install their own treasury or mint.
 #[derive(Accounts)]
 pub struct InitConfig<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ VaultError::NotUpgradeAuthority)]
+    pub program: Program<'info, OpaqVault>,
+    #[account(constraint = program_data.upgrade_authority_address == Some(admin.key()) @ VaultError::NotUpgradeAuthority)]
+    pub program_data: Account<'info, ProgramData>,
     #[account(
         init,
         payer = admin,
@@ -59,8 +68,16 @@ pub fn handle_init_config(ctx: Context<InitConfig>, fee_bps: u16) -> Result<()> 
         wrapped_mint.freeze_authority.is_none(),
         VaultError::FreezeAuthoritySet
     );
-    get_mint_extension_data::<ConfidentialTransferMint>(&wrapped_mint.to_account_info())
-        .map_err(|_| error!(VaultError::MissingConfidentialTransfer))?;
+    let confidential =
+        get_mint_extension_data::<ConfidentialTransferMint>(&wrapped_mint.to_account_info())
+            .map_err(|_| error!(VaultError::MissingConfidentialTransfer))?;
+    // No one may later approve/deny accounts or install an auditor key that decrypts transfers.
+    require!(
+        confidential.authority == Default::default()
+            && bool::from(confidential.auto_approve_new_accounts)
+            && confidential.auditor_elgamal_pubkey == Default::default(),
+        VaultError::ConfidentialMintNotLocked
+    );
 
     let config = &mut ctx.accounts.config;
     config.admin = ctx.accounts.admin.key();

@@ -9,6 +9,7 @@
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "test": "pnpm -r test",
+    "test:integration": "NO_DNA=1 anchor build && pnpm --filter @opaq/integration-tests test",
     "lint": "pnpm -r lint"
   }
 }

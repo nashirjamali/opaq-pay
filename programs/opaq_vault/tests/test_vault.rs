@@ -1,7 +1,7 @@
 use {
     anchor_lang::{
         prelude::Pubkey,
-        solana_program::{instruction::Instruction, program_pack::Pack},
+        solana_program::{bpf_loader_upgradeable, instruction::Instruction, program_pack::Pack},
         system_program, AccountDeserialize, InstructionData, ToAccountMetas,
     },
     anchor_spl::{
@@ -12,7 +12,7 @@ use {
         },
     },
     litesvm::LiteSVM,
-    opaq_vault::{state::Config, CONFIG_SEED, VAULT_SEED},
+    opaq_vault::{state::Config, CONFIG_SEED, PENDING_ADMIN_SEED, VAULT_SEED},
     solana_account::Account,
     solana_keypair::Keypair,
     solana_message::{Message, VersionedMessage},
@@ -97,8 +97,32 @@ fn config_pda() -> Pubkey {
     Pubkey::find_program_address(&[CONFIG_SEED], &opaq_vault::id()).0
 }
 
-/// Token-2022 wrapper mint whose mint authority is the config PDA.
+fn program_data_pda() -> Pubkey {
+    Pubkey::find_program_address(&[opaq_vault::id().as_ref()], &bpf_loader_upgradeable::ID).0
+}
+
+/// LiteSVM deploys upgradeable programs without an upgrade authority; set one.
+fn set_upgrade_authority(svm: &mut LiteSVM, authority: &Pubkey) {
+    let key = program_data_pda();
+    let mut account = svm.get_account(&key).unwrap();
+    // UpgradeableLoaderState::ProgramData: u32 tag, u64 slot, Option<Pubkey> (u8 tag + 32 bytes).
+    account.data[12] = 1;
+    account.data[13..45].copy_from_slice(authority.as_ref());
+    svm.set_account(key, account).unwrap();
+}
+
+/// Token-2022 wrapper mint whose mint authority is the config PDA. Its confidential-transfer
+/// settings are locked (no authority, auto-approve, no auditor) unless `ct_authority` is set.
 fn wrapped_mint(svm: &mut LiteSVM, payer: &Keypair, with_confidential: bool) -> Pubkey {
+    wrapped_mint_with(svm, payer, with_confidential, None)
+}
+
+fn wrapped_mint_with(
+    svm: &mut LiteSVM,
+    payer: &Keypair,
+    with_confidential: bool,
+    ct_authority: Option<Pubkey>,
+) -> Pubkey {
     let extensions: &[ExtensionType] = if with_confidential {
         &[ExtensionType::ConfidentialTransferMint]
     } else {
@@ -113,7 +137,7 @@ fn wrapped_mint(svm: &mut LiteSVM, payer: &Keypair, with_confidential: bool) -> 
             confidential_transfer::instruction::initialize_mint(
                 &spl_token_2022::ID,
                 &mint,
-                Some(payer.pubkey()),
+                ct_authority,
                 true,
                 None,
             )
@@ -148,6 +172,8 @@ fn init_config_ix(
         &opaq_vault::instruction::InitConfig { fee_bps }.data(),
         opaq_vault::accounts::InitConfig {
             admin: *admin,
+            program: opaq_vault::id(),
+            program_data: program_data_pda(),
             config,
             underlying_mint: *usdc,
             wrapped_mint: *wrapped,
@@ -171,6 +197,7 @@ fn base_setup() -> (LiteSVM, Keypair, Keypair, Pubkey, Pubkey) {
 
     let admin = Keypair::new();
     let user = Keypair::new();
+    set_upgrade_authority(&mut svm, &admin.pubkey());
     svm.airdrop(&admin.pubkey(), 10_000_000_000).unwrap();
     svm.airdrop(&user.pubkey(), 10_000_000_000).unwrap();
 
@@ -399,4 +426,130 @@ fn set_fee_is_admin_only_and_capped() {
             .fee_bps,
         100
     );
+}
+
+#[test]
+fn init_config_requires_the_upgrade_authority() {
+    let (mut svm, admin, user, usdc, treasury) = base_setup();
+    let wrapped = wrapped_mint(&mut svm, &admin, true);
+    // Anyone else racing to initialise a fresh deployment is rejected.
+    let ix = init_config_ix(&user.pubkey(), &usdc, &wrapped, &treasury, FEE_BPS);
+    assert!(!send(&mut svm, &[ix], &[&user]));
+    let ix = init_config_ix(&admin.pubkey(), &usdc, &wrapped, &treasury, FEE_BPS);
+    assert!(send(&mut svm, &[ix], &[&admin]));
+}
+
+#[test]
+fn init_config_rejects_wrapper_mint_with_confidential_authority() {
+    let (mut svm, admin, _user, usdc, treasury) = base_setup();
+    let wrapped = wrapped_mint_with(&mut svm, &admin, true, Some(admin.pubkey()));
+    let ix = init_config_ix(&admin.pubkey(), &usdc, &wrapped, &treasury, FEE_BPS);
+    assert!(!send(&mut svm, &[ix], &[&admin]));
+}
+
+fn pending_admin_pda(config: &Pubkey) -> Pubkey {
+    Pubkey::find_program_address(&[PENDING_ADMIN_SEED, config.as_ref()], &opaq_vault::id()).0
+}
+
+fn propose_admin_ix(env: &Env, admin: &Pubkey, new_admin: Pubkey) -> Instruction {
+    Instruction::new_with_bytes(
+        opaq_vault::id(),
+        &opaq_vault::instruction::ProposeAdmin { new_admin }.data(),
+        opaq_vault::accounts::ProposeAdmin {
+            admin: *admin,
+            config: env.config,
+            pending_admin: pending_admin_pda(&env.config),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None),
+    )
+}
+
+fn accept_admin_ix(env: &Env, new_admin: &Pubkey, proposed_by: &Pubkey) -> Instruction {
+    Instruction::new_with_bytes(
+        opaq_vault::id(),
+        &opaq_vault::instruction::AcceptAdmin {}.data(),
+        opaq_vault::accounts::AcceptAdmin {
+            new_admin: *new_admin,
+            config: env.config,
+            pending_admin: pending_admin_pda(&env.config),
+            proposed_by: *proposed_by,
+        }
+        .to_account_metas(None),
+    )
+}
+
+fn cancel_admin_transfer_ix(env: &Env, admin: &Pubkey, proposed_by: &Pubkey) -> Instruction {
+    Instruction::new_with_bytes(
+        opaq_vault::id(),
+        &opaq_vault::instruction::CancelAdminTransfer {}.data(),
+        opaq_vault::accounts::CancelAdminTransfer {
+            admin: *admin,
+            config: env.config,
+            pending_admin: pending_admin_pda(&env.config),
+            proposed_by: *proposed_by,
+        }
+        .to_account_metas(None),
+    )
+}
+
+fn current_admin(env: &Env) -> Pubkey {
+    let account = env.svm.get_account(&env.config).unwrap();
+    Config::try_deserialize(&mut account.data.as_slice())
+        .unwrap()
+        .admin
+}
+
+#[test]
+fn admin_transfer_is_two_step() {
+    let mut env = setup();
+    let admin = env.admin.insecure_clone();
+    let user = env.user.insecure_clone();
+    let successor = Keypair::new();
+    env.svm.airdrop(&successor.pubkey(), 1_000_000_000).unwrap();
+
+    // Only the admin can propose.
+    let ix = propose_admin_ix(&env, &user.pubkey(), successor.pubkey());
+    assert!(!send(&mut env.svm, &[ix], &[&user]));
+    let ix = propose_admin_ix(&env, &admin.pubkey(), successor.pubkey());
+    assert!(send(&mut env.svm, &[ix], &[&admin]));
+    assert_eq!(
+        current_admin(&env),
+        admin.pubkey(),
+        "nothing changes until accepted"
+    );
+
+    // Only the proposed key can accept.
+    let ix = accept_admin_ix(&env, &user.pubkey(), &admin.pubkey());
+    assert!(!send(&mut env.svm, &[ix], &[&user]));
+    let ix = accept_admin_ix(&env, &successor.pubkey(), &admin.pubkey());
+    assert!(send(&mut env.svm, &[ix], &[&successor]));
+    assert_eq!(current_admin(&env), successor.pubkey());
+    assert!(env
+        .svm
+        .get_account(&pending_admin_pda(&env.config))
+        .is_none_or(|a| a.lamports == 0));
+
+    // The old admin lost its powers; the new one has them.
+    let ix = set_fee_ix(&env, &admin.pubkey(), 10);
+    assert!(!send(&mut env.svm, &[ix], &[&admin]));
+    let ix = set_fee_ix(&env, &successor.pubkey(), 10);
+    assert!(send(&mut env.svm, &[ix], &[&successor]));
+}
+
+#[test]
+fn admin_transfer_can_be_cancelled() {
+    let mut env = setup();
+    let admin = env.admin.insecure_clone();
+    let successor = Keypair::new();
+    env.svm.airdrop(&successor.pubkey(), 1_000_000_000).unwrap();
+
+    let ix = propose_admin_ix(&env, &admin.pubkey(), successor.pubkey());
+    assert!(send(&mut env.svm, &[ix], &[&admin]));
+    let ix = cancel_admin_transfer_ix(&env, &admin.pubkey(), &admin.pubkey());
+    assert!(send(&mut env.svm, &[ix], &[&admin]));
+
+    let ix = accept_admin_ix(&env, &successor.pubkey(), &admin.pubkey());
+    assert!(!send(&mut env.svm, &[ix], &[&successor]));
+    assert_eq!(current_admin(&env), admin.pubkey());
 }

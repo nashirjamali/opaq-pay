@@ -1,0 +1,45 @@
+# Local or single-host deployment: Postgres + the Opaq server.
+#   RELAYER_KEYPAIR_FILE=/abs/path/relayer.json docker compose -f apps/server/compose.yaml up -d --build
+# The relayer key stays on the host and is mounted read-only; it must hold SOL only and be
+# funded from somewhere unrelated to any user. Override RPC_URL with a paid endpoint in
+# production (the public devnet RPC rate-limits).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: opaq
+      POSTGRES_PASSWORD: opaq
+      POSTGRES_DB: opaq
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opaq"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://opaq:opaq@db:5432/opaq
+      RPC_URL: ${RPC_URL:-https://api.devnet.solana.com}
+      OPAQ_CLUSTER: ${OPAQ_CLUSTER:-devnet}
+      INDEXER_COMMITMENT: ${INDEXER_COMMITMENT:-finalized}
+      RELAYER_KEYPAIR_PATH: /run/secrets/relayer.json
+      RELAYER_MAX_LAMPORTS_PER_TX: ${RELAYER_MAX_LAMPORTS_PER_TX:-20000000}
+      RELAYER_DAILY_LAMPORT_BUDGET: ${RELAYER_DAILY_LAMPORT_BUDGET:-2000000000}
+      RELAYER_REQUESTS_PER_MINUTE: ${RELAYER_REQUESTS_PER_MINUTE:-60}
+    volumes:
+      - ${RELAYER_KEYPAIR_FILE:?set RELAYER_KEYPAIR_FILE to the relayer keypair JSON}:/run/secrets/relayer.json:ro
+    ports:
+      - "${PORT:-8787}:8787"
+    restart: unless-stopped
+
+volumes:
+  db:

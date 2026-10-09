@@ -32,3 +32,21 @@ pub struct FeeUpdated {
     pub old_fee_bps: u16,
     pub new_fee_bps: u16,
 }
+
+#[event]
+pub struct AdminTransferProposed {
+    pub admin: Pubkey,
+    pub new_admin: Pubkey,
+}
+
+#[event]
+pub struct AdminTransferCancelled {
+    pub admin: Pubkey,
+    pub new_admin: Pubkey,
+}
+
+#[event]
+pub struct AdminChanged {
+    pub old_admin: Pubkey,
+    pub new_admin: Pubkey,
+}
