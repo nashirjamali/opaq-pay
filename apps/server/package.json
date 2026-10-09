@@ -1,0 +1,30 @@
+{
+  "name": "@opaq/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.4",
+    "@opaq/sdk": "workspace:^",
+    "@solana-program/token": "^0.17.0",
+    "@solana/kit": "^8.4.0",
+    "hono": "^4.13.13",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@solana-program/system": "^0.15.0",
+    "@solana-program/token-2022": "^0.19.0",
+    "@solana/surfpool": "^1.6.0",
+    "@types/node": "^24",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}
