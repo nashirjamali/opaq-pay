@@ -307,4 +307,69 @@ export async function findWrappedTokenAccount(owner: Address, wrappedMint: Addre
   return ata;
 }
 
+/** Creates the recipient's wrapper-token account (Token-2022 ATA) if it does not exist yet. */
+export async function getCreateWrappedTokenAccountInstruction(input: {
+  payer: TransactionSigner;
+  owner: Address;
+  vault: VaultSettings;
+}): Promise<{ instruction: Instruction; wrappedTokenAccount: Address }> {
+  const wrappedTokenAccount = await findWrappedTokenAccount(input.owner, input.vault.wrappedMint);
+  return {
+    wrappedTokenAccount,
+    instruction: getCreateAssociatedTokenIdempotentInstruction({
+      payer: input.payer,
+      ata: wrappedTokenAccount,
+      owner: input.owner,
+      mint: input.vault.wrappedMint,
+      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+    }),
+  };
+}
+
+export type WithdrawFromVaultInput = {
+  owner: TransactionSigner;
+  vault: VaultSettings;
+  amount: bigint;
+  /** Where the USDC goes; defaults to the owner's ATA for the underlying mint. */
+  destination?: Address;
+  /** Wrapper-token account to burn from; defaults to the owner's wrapper ATA. */
+  ownerWrapped?: Address;
+};
+
+/**
+ * Burns `amount` wrapper tokens from the owner and sends the same amount of USDC out of the
+ * vault. Only the non-confidential (public) wrapper balance can be withdrawn this way;
+ * confidential balance must first be moved to public with Token-2022 `Withdraw`.
+ */
+export async function getWithdrawFromVaultInstruction(input: WithdrawFromVaultInput): Promise<Instruction> {
+  if (input.amount <= 0n) throw new Error('Amount must be greater than zero');
+  const settings = input.vault;
+  const destination =
+    input.destination ??
+    (
+      await findAssociatedTokenPda({
+        owner: input.owner.address,
+        mint: settings.underlyingMint,
+        tokenProgram: settings.underlyingTokenProgram,
+      })
+    )[0];
+  const ownerWrapped = input.ownerWrapped ?? (await findWrappedTokenAccount(input.owner.address, settings.wrappedMint));
+
+  return vault.getWithdrawInstruction(
+    {
+      owner: input.owner,
+      config: settings.config,
+      underlyingMint: settings.underlyingMint,
+      wrappedMint: settings.wrappedMint,
+      ownerWrapped,
+      vault: settings.vault,
+      destination,
+      underlyingTokenProgram: settings.underlyingTokenProgram,
+      wrappedTokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+      amount: input.amount,
+    },
+    { programAddress: settings.programAddress },
+  );
+}
+
 export { TOKEN_PROGRAM_ADDRESS };

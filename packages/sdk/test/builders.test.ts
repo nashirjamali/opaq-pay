@@ -12,8 +12,10 @@ import {
   generateMetaKeys,
   getPayToMetaAddressInstructions,
   DEVNET_PROGRAMS,
+  getCreateWrappedTokenAccountInstruction,
   getRegisterHandleInstruction,
   getSweepToVaultInstructions,
+  getWithdrawFromVaultInstruction,
   isValidHandleName,
   registry,
   TOKEN_2022_PROGRAM_ADDRESS,
@@ -170,6 +172,64 @@ describe('sweeping into the vault', () => {
 
     expect(close!.programAddress).toBe(TOKEN_PROGRAM_ADDRESS);
     expect(close!.accounts?.map((a) => a.address)).toEqual([stealthTokenAccount, relayer, payment.stealthAddress]);
+  });
+});
+
+describe('withdrawing and wrapper accounts', () => {
+  async function settingsFor(programAddress: Address): Promise<VaultSettings> {
+    const [config] = await vault.findConfigPda({ programAddress });
+    return {
+      programAddress,
+      config,
+      underlyingMint: USDC,
+      wrappedMint: (await generateKeyPairSigner()).address,
+      vault: (await generateKeyPairSigner()).address,
+      treasury: (await generateKeyPairSigner()).address,
+      feeBps: 50,
+      underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
+    };
+  }
+
+  it('creates the Token-2022 wrapper ATA idempotently', async () => {
+    const settings = await settingsFor(vault.OPAQ_VAULT_PROGRAM_ADDRESS);
+    const payer = await generateKeyPairSigner();
+    const owner = (await generateKeyPairSigner()).address;
+    const { instruction, wrappedTokenAccount } = await getCreateWrappedTokenAccountInstruction({
+      payer,
+      owner,
+      vault: settings,
+    });
+    const [expected] = await findAssociatedTokenPda({
+      owner,
+      mint: settings.wrappedMint,
+      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+    });
+    expect(wrappedTokenAccount).toBe(expected);
+    expect(instruction.accounts?.map((a) => a.address)).toContain(expected);
+  });
+
+  it('builds withdraw against the settings’ program, defaulting to the owner’s ATAs', async () => {
+    const settings = await settingsFor(DEVNET_PROGRAMS.vault);
+    const owner = await generateKeyPairSigner();
+    const ix = await getWithdrawFromVaultInstruction({ owner, vault: settings, amount: 5_000_000n });
+
+    expect(ix.programAddress).toBe(DEVNET_PROGRAMS.vault);
+    const parsed = vault.parseWithdrawInstruction(ix as Parameters<typeof vault.parseWithdrawInstruction>[0]);
+    const [usdcAta] = await findAssociatedTokenPda({
+      owner: owner.address,
+      mint: USDC,
+      tokenProgram: TOKEN_PROGRAM_ADDRESS,
+    });
+    const [wrappedAta] = await findAssociatedTokenPda({
+      owner: owner.address,
+      mint: settings.wrappedMint,
+      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+    });
+    expect(parsed.accounts.config.address).toBe(settings.config);
+    expect(parsed.accounts.destination.address).toBe(usdcAta);
+    expect(parsed.accounts.ownerWrapped.address).toBe(wrappedAta);
+    expect(parsed.data.amount).toBe(5_000_000n);
+    await expect(getWithdrawFromVaultInstruction({ owner, vault: settings, amount: 0n })).rejects.toThrow();
   });
 });
 
