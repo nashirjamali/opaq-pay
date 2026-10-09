@@ -11,7 +11,6 @@ import {
   findOwnPayments,
   generateMetaKeys,
   getPayToMetaAddressInstructions,
-  DEVNET_PROGRAMS,
   getCreateWrappedTokenAccountInstruction,
   getRegisterHandleInstruction,
   getSweepToVaultInstructions,
@@ -22,6 +21,13 @@ import {
   vault,
   type VaultSettings,
 } from '../src/index.js';
+
+/** Some other deployment (the first devnet one), to check that builders follow `programs`. */
+const OTHER_PROGRAMS = {
+  registry: address('6xaXX6KSFxkNohbanstr2Sqpk3teRUExuLQ1u1ndcEyE'),
+  vault: address('JHC14FJWJWAkLNj4aDe1EPr65ideg4tSoZmrdXuZtPA'),
+};
+
 
 const USDC = address('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
@@ -150,6 +156,7 @@ describe('sweeping into the vault', () => {
       treasury: (await generateKeyPairSigner()).address,
       feeBps: 50,
       underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
+      decimals: 6,
     };
     const destination = (await generateKeyPairSigner()).address as Address;
     const relayer = (await generateKeyPairSigner()).address;
@@ -175,6 +182,47 @@ describe('sweeping into the vault', () => {
   });
 });
 
+describe('sweeping to the stealth address’s own wrapper account', () => {
+  it('creates the stealth wrapper ATA and mints there by default', async () => {
+    const recipient = generateMetaKeys();
+    const payer = await generateKeyPairSigner();
+    const relayer = await generateKeyPairSigner();
+    const { payment } = await getPayToMetaAddressInstructions({ payer, meta: recipient, mint: USDC, decimals: 6, amount: 1n });
+    const [own] = findOwnPayments(recipient.scanSeed, recipient.spendPubkey, [payment]);
+    const stealthSigner = createStealthSigner(deriveStealthScalar(recipient.spendSeed, own!.tweak));
+    const [config] = await vault.findConfigPda();
+    const settings: VaultSettings = {
+      programAddress: vault.OPAQ_VAULT_PROGRAM_ADDRESS,
+      config,
+      underlyingMint: USDC,
+      wrappedMint: (await generateKeyPairSigner()).address,
+      vault: (await generateKeyPairSigner()).address,
+      treasury: (await generateKeyPairSigner()).address,
+      feeBps: 50,
+      underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
+      decimals: 6,
+    };
+
+    const [create, deposit, close] = await getSweepToVaultInstructions({
+      stealthSigner,
+      vault: settings,
+      amount: 1n,
+      rentRecipient: relayer.address,
+      accountPayer: relayer,
+    });
+    const [stealthWrapped] = await findAssociatedTokenPda({
+      owner: payment.stealthAddress,
+      mint: settings.wrappedMint,
+      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+    });
+    expect(create!.accounts?.map((a) => a.address)).toEqual(expect.arrayContaining([stealthWrapped, relayer.address]));
+    const parsed = vault.parseDepositInstruction(deposit as Parameters<typeof vault.parseDepositInstruction>[0]);
+    expect(parsed.accounts.destination.address).toBe(stealthWrapped);
+    // Nothing in the sweep points at the recipient: only the stealth address, the relayer and protocol accounts.
+    expect(close!.programAddress).toBe(TOKEN_PROGRAM_ADDRESS);
+  });
+});
+
 describe('withdrawing and wrapper accounts', () => {
   async function settingsFor(programAddress: Address): Promise<VaultSettings> {
     const [config] = await vault.findConfigPda({ programAddress });
@@ -187,6 +235,7 @@ describe('withdrawing and wrapper accounts', () => {
       treasury: (await generateKeyPairSigner()).address,
       feeBps: 50,
       underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
+      decimals: 6,
     };
   }
 
@@ -209,11 +258,11 @@ describe('withdrawing and wrapper accounts', () => {
   });
 
   it('builds withdraw against the settings’ program, defaulting to the owner’s ATAs', async () => {
-    const settings = await settingsFor(DEVNET_PROGRAMS.vault);
+    const settings = await settingsFor(OTHER_PROGRAMS.vault);
     const owner = await generateKeyPairSigner();
     const ix = await getWithdrawFromVaultInstruction({ owner, vault: settings, amount: 5_000_000n });
 
-    expect(ix.programAddress).toBe(DEVNET_PROGRAMS.vault);
+    expect(ix.programAddress).toBe(OTHER_PROGRAMS.vault);
     const parsed = vault.parseWithdrawInstruction(ix as Parameters<typeof vault.parseWithdrawInstruction>[0]);
     const [usdcAta] = await findAssociatedTokenPda({
       owner: owner.address,
@@ -237,9 +286,9 @@ describe('targeting a deployment', () => {
   it('derives handle PDA, event authority and announce from the configured registry', async () => {
     const owner = await generateKeyPairSigner();
     const meta = generateMetaKeys();
-    const ix = await getRegisterHandleInstruction({ owner, name: 'raka', meta, programs: DEVNET_PROGRAMS });
-    const [handle] = await registry.findHandlePda({ name: 'raka' }, { programAddress: DEVNET_PROGRAMS.registry });
-    expect(ix.programAddress).toBe(DEVNET_PROGRAMS.registry);
+    const ix = await getRegisterHandleInstruction({ owner, name: 'raka', meta, programs: OTHER_PROGRAMS });
+    const [handle] = await registry.findHandlePda({ name: 'raka' }, { programAddress: OTHER_PROGRAMS.registry });
+    expect(ix.programAddress).toBe(OTHER_PROGRAMS.registry);
     expect(ix.accounts?.map((a) => a.address)).toContain(handle);
 
     const pay = await getPayToMetaAddressInstructions({
@@ -248,10 +297,10 @@ describe('targeting a deployment', () => {
       mint: USDC,
       decimals: 6,
       amount: 1n,
-      programs: DEVNET_PROGRAMS,
+      programs: OTHER_PROGRAMS,
     });
     const announce = pay.instructions[2]!;
-    expect(announce.programAddress).toBe(DEVNET_PROGRAMS.registry);
-    expect(announce.accounts?.map((a) => a.address)).toContain(await findEventAuthorityPda(DEVNET_PROGRAMS.registry));
+    expect(announce.programAddress).toBe(OTHER_PROGRAMS.registry);
+    expect(announce.accounts?.map((a) => a.address)).toContain(await findEventAuthorityPda(OTHER_PROGRAMS.registry));
   });
 });

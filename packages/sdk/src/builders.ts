@@ -9,6 +9,7 @@ import {
   findAssociatedTokenPda,
   getCloseAccountInstruction,
   getCreateAssociatedTokenIdempotentInstruction,
+  getMintDecoder,
   getTransferCheckedInstruction,
   TOKEN_PROGRAM_ADDRESS,
 } from '@solana-program/token';
@@ -224,6 +225,8 @@ export type VaultSettings = {
   treasury: Address;
   feeBps: number;
   underlyingTokenProgram: Address;
+  /** Decimals of the underlying mint, which the wrapper mint shares. */
+  decimals: number;
 };
 
 /** Reads the vault config and the underlying mint's token program. */
@@ -239,6 +242,8 @@ export async function fetchVaultSettings(
   if (mint.programAddress !== TOKEN_PROGRAM_ADDRESS && mint.programAddress !== TOKEN_2022_PROGRAM_ADDRESS) {
     throw new Error('Underlying mint is not owned by a token program');
   }
+  // The base mint layout is shared by both token programs.
+  const { decimals } = getMintDecoder().decode(mint.data);
   return {
     programAddress: programs.vault,
     config,
@@ -248,6 +253,7 @@ export async function fetchVaultSettings(
     treasury: account.data.treasury,
     feeBps: account.data.feeBps,
     underlyingTokenProgram: mint.programAddress,
+    decimals,
   };
 }
 
@@ -255,18 +261,35 @@ export type SweepToVaultInput = {
   /** Signer for the stealth address, see `createStealthSigner`. */
   stealthSigner: TransactionSigner;
   vault: VaultSettings;
-  /** Recipient's wrapper-token account (Token-2022) that receives the minted tokens. */
-  destination: Address;
   /** Whole balance of the stealth token account; the account is closed afterwards. */
   amount: bigint;
   /** Receives the stealth token account's rent when it is closed (e.g. the relayer). */
   rentRecipient: Address;
-};
+} & (
+  | {
+      /**
+       * Pays for the stealth address's own wrapper account if it does not exist yet (the
+       * relayer). The default: the wrapped tokens stay with the stealth address, so nothing
+       * on chain links the payment to the recipient's wallet.
+       */
+      accountPayer: TransactionSigner;
+      destination?: undefined;
+    }
+  | {
+      /**
+       * Explicit wrapper-token account to mint into. Sweeping into an account the recipient's
+       * wallet owns publicly links this payment to that wallet; avoid unless that is intended.
+       */
+      destination: Address;
+      accountPayer?: undefined;
+    }
+);
 
 /**
- * Deposits the stealth token account's balance into the vault, minting wrapper tokens to
- * `destination`, then closes the emptied stealth token account. The stealth signer only
- * authorises; the transaction fee payer is chosen by the caller (normally the relayer).
+ * Deposits the stealth token account's balance into the vault and closes the emptied stealth
+ * token account. By default the wrapper tokens are minted to the stealth address's own
+ * wrapper account (created idempotently), which `@opaq/sdk/confidential` can then shield.
+ * The stealth signer only authorises; the fee payer is the caller's choice (the relayer).
  */
 export async function getSweepToVaultInstructions(input: SweepToVaultInput): Promise<Instruction[]> {
   if (input.amount <= 0n) throw new Error('Amount must be greater than zero');
@@ -277,7 +300,21 @@ export async function getSweepToVaultInstructions(input: SweepToVaultInput): Pro
     tokenProgram: settings.underlyingTokenProgram,
   });
 
-  return [
+  const instructions: Instruction[] = [];
+  let destination: Address;
+  if (input.destination !== undefined) {
+    destination = input.destination;
+  } else {
+    const created = await getCreateWrappedTokenAccountInstruction({
+      payer: input.accountPayer,
+      owner: input.stealthSigner.address,
+      vault: settings,
+    });
+    instructions.push(created.instruction);
+    destination = created.wrappedTokenAccount;
+  }
+
+  instructions.push(
     vault.getDepositInstruction(
       {
         depositor: input.stealthSigner,
@@ -287,7 +324,7 @@ export async function getSweepToVaultInstructions(input: SweepToVaultInput): Pro
         depositorToken: stealthTokenAccount,
         vault: settings.vault,
         treasury: settings.treasury,
-        destination: input.destination,
+        destination,
         underlyingTokenProgram: settings.underlyingTokenProgram,
         wrappedTokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
         amount: input.amount,
@@ -298,7 +335,8 @@ export async function getSweepToVaultInstructions(input: SweepToVaultInput): Pro
       { account: stealthTokenAccount, destination: input.rentRecipient, owner: input.stealthSigner },
       { programAddress: settings.underlyingTokenProgram },
     ),
-  ];
+  );
+  return instructions;
 }
 
 /** Recipient's wrapper-token ATA (Token-2022). */

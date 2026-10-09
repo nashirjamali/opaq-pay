@@ -8,9 +8,11 @@
 import { findAssociatedTokenPda, getTokenDecoder } from '@solana-program/token';
 import {
   fetchEncodedAccount,
+  fetchEncodedAccounts,
   getBase58Encoder,
   type Address,
   type GetAccountInfoApi,
+  type GetMultipleAccountsApi,
   type GetSignaturesForAddressApi,
   type GetTransactionApi,
   type Rpc,
@@ -19,13 +21,15 @@ import {
 import {
   decodeAnnouncementEventCpi,
   findEventAuthorityPda,
+  TOKEN_2022_PROGRAM_ADDRESS,
   type OwnPayment,
   type VaultSettings,
 } from './builders.js';
 import { LOCALNET_PROGRAMS, type OpaqPrograms } from './config.js';
 import { scanAnnouncement, type Announcement } from './stealth.js';
+import type { MaybeEncodedAccount } from '@solana/kit';
 
-export type ScanRpc = Rpc<GetSignaturesForAddressApi & GetTransactionApi & GetAccountInfoApi>;
+export type ScanRpc = Rpc<GetSignaturesForAddressApi & GetTransactionApi & GetAccountInfoApi & GetMultipleAccountsApi>;
 
 export type ScannedAnnouncement = Announcement & {
   signature: Signature;
@@ -164,23 +168,29 @@ export async function fetchAnnouncements(
   };
 }
 
-/** Balance of the stealth address's token account for `mint`; 0n when it does not exist. */
+/**
+ * The stealth address's associated token account for `mint`: whether it exists and its public
+ * (non-confidential) amount. Works for Token and Token-2022 accounts; confidential balances
+ * need the keys in `@opaq/sdk/confidential`.
+ */
 export async function getStealthTokenBalance(
   rpc: Rpc<GetAccountInfoApi>,
   stealthAddress: Address,
   mint: Address,
   tokenProgram: Address,
-): Promise<{ tokenAccount: Address; amount: bigint }> {
+): Promise<{ tokenAccount: Address; exists: boolean; amount: bigint }> {
   const [tokenAccount] = await findAssociatedTokenPda({ owner: stealthAddress, mint, tokenProgram });
+  const missing = { tokenAccount, exists: false, amount: 0n };
   const account = await fetchEncodedAccount(rpc, tokenAccount);
-  if (!account.exists || account.programAddress !== tokenProgram) return { tokenAccount, amount: 0n };
+  if (!account.exists || account.programAddress !== tokenProgram) return missing;
   try {
+    // The base layout is shared by both token programs; Token-2022 extensions follow it.
     const token = getTokenDecoder().decode(account.data);
     // The address is derived from owner + mint, but never trust account contents blindly.
-    if (token.owner !== stealthAddress || token.mint !== mint) return { tokenAccount, amount: 0n };
-    return { tokenAccount, amount: token.amount };
+    if (token.owner !== stealthAddress || token.mint !== mint) return missing;
+    return { tokenAccount, exists: true, amount: token.amount };
   } catch {
-    return { tokenAccount, amount: 0n };
+    return missing;
   }
 }
 
@@ -188,16 +198,95 @@ export type DetectedPayment = OwnPayment & {
   signature: Signature;
   slot: bigint;
   blockTime: number | null;
-  /** Stealth token account that holds (or held) the funds. */
+  /** Stealth USDC account the payer paid into. */
   tokenAccount: Address;
-  /** Balance waiting to be swept right now; 0n once swept. */
+  /** USDC waiting to be swept right now; 0n once swept. */
   amount: bigint;
+  /** The stealth address's own wrapper-token account, where sweeps go by default. */
+  wrappedTokenAccount: Address;
+  wrappedAccountExists: boolean;
+  /** Public wrapper balance; a shielded balance shows up as 0 here (decrypt it with the confidential helpers). */
+  wrappedPublicAmount: bigint;
 };
+
+/** Keeps the announcements derived from this recipient's scan key, with their tweaks. */
+export function matchAnnouncements<T extends Announcement>(
+  scanSeed: Uint8Array,
+  spendPubkey: Uint8Array,
+  announcements: readonly T[],
+): (T & { tweak: bigint })[] {
+  const matched: (T & { tweak: bigint })[] = [];
+  for (const announcement of announcements) {
+    // Announcements are untrusted: keep only those derived from our scan key.
+    const match = scanAnnouncement(scanSeed, spendPubkey, announcement);
+    if (match) matched.push({ ...announcement, tweak: match.tweak });
+  }
+  return matched;
+}
+
+const MAX_ACCOUNTS_PER_CALL = 100; // getMultipleAccounts limit
+
+function decodeOwnedTokenAccount(account: MaybeEncodedAccount, owner: Address, mint: Address, tokenProgram: Address) {
+  if (!account.exists || account.programAddress !== tokenProgram) return { exists: false, amount: 0n };
+  try {
+    const token = getTokenDecoder().decode(account.data);
+    if (token.owner !== owner || token.mint !== mint) return { exists: false, amount: 0n };
+    return { exists: true, amount: token.amount };
+  } catch {
+    return { exists: false, amount: 0n };
+  }
+}
+
+/**
+ * Looks up where each matched payment's funds are, two accounts per payment, batched into
+ * `getMultipleAccounts` calls of 100.
+ */
+export async function resolvePayments(
+  rpc: Rpc<GetMultipleAccountsApi>,
+  matched: readonly (ScannedAnnouncement & { tweak: bigint })[],
+  vault: Pick<VaultSettings, 'underlyingMint' | 'underlyingTokenProgram' | 'wrappedMint'>,
+  options: { includeSwept?: boolean } = {},
+): Promise<DetectedPayment[]> {
+  const addresses: Address[] = [];
+  for (const payment of matched) {
+    const [usdc] = await findAssociatedTokenPda({
+      owner: payment.stealthAddress,
+      mint: vault.underlyingMint,
+      tokenProgram: vault.underlyingTokenProgram,
+    });
+    const [wrapped] = await findAssociatedTokenPda({
+      owner: payment.stealthAddress,
+      mint: vault.wrappedMint,
+      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+    });
+    addresses.push(usdc, wrapped);
+  }
+  const accounts: MaybeEncodedAccount[] = [];
+  for (let i = 0; i < addresses.length; i += MAX_ACCOUNTS_PER_CALL) {
+    accounts.push(...(await fetchEncodedAccounts(rpc, addresses.slice(i, i + MAX_ACCOUNTS_PER_CALL))));
+  }
+
+  const payments: DetectedPayment[] = [];
+  matched.forEach((payment, i) => {
+    const usdc = decodeOwnedTokenAccount(accounts[2 * i]!, payment.stealthAddress, vault.underlyingMint, vault.underlyingTokenProgram);
+    const wrapped = decodeOwnedTokenAccount(accounts[2 * i + 1]!, payment.stealthAddress, vault.wrappedMint, TOKEN_2022_PROGRAM_ADDRESS);
+    if (usdc.amount === 0n && !wrapped.exists && !options.includeSwept) return;
+    payments.push({
+      ...payment,
+      tokenAccount: addresses[2 * i]!,
+      amount: usdc.amount,
+      wrappedTokenAccount: addresses[2 * i + 1]!,
+      wrappedAccountExists: wrapped.exists,
+      wrappedPublicAmount: wrapped.amount,
+    });
+  });
+  return payments;
+}
 
 export type ScanForPaymentsInput = {
   scanSeed: Uint8Array;
   spendPubkey: Uint8Array;
-  vault: Pick<VaultSettings, 'underlyingMint' | 'underlyingTokenProgram'>;
+  vault: Pick<VaultSettings, 'underlyingMint' | 'underlyingTokenProgram' | 'wrappedMint'>;
   programs?: OpaqPrograms;
   /** Newest signature handled by the previous run. */
   until?: Signature;
@@ -205,7 +294,10 @@ export type ScanForPaymentsInput = {
   before?: Signature;
   /** Upper bound on signatures examined per call. Default 5000. */
   maxSignatures?: number;
-  /** Keep payments whose token account is already empty. Default false. */
+  /**
+   * Keep payments with nothing left at the stealth address: no USDC to sweep and no wrapper
+   * account (it was closed after cashing out). Default false.
+   */
   includeSwept?: boolean;
   commitment?: 'confirmed' | 'finalized';
 };
@@ -246,20 +338,8 @@ export async function scanForPayments(rpc: ScanRpc, input: ScanForPaymentsInput)
     newestSignature ??= page.newestSignature;
     examined += page.signaturesExamined;
 
-    const found: DetectedPayment[] = [];
-    for (const item of page.items) {
-      // Announcements are untrusted: keep only those derived from our scan key.
-      const match = scanAnnouncement(input.scanSeed, input.spendPubkey, item);
-      if (!match) continue;
-      const { tokenAccount, amount } = await getStealthTokenBalance(
-        rpc,
-        item.stealthAddress,
-        input.vault.underlyingMint,
-        input.vault.underlyingTokenProgram,
-      );
-      if (amount === 0n && !input.includeSwept) continue;
-      found.push({ ...item, tweak: match.tweak, tokenAccount, amount });
-    }
+    const matched = matchAnnouncements(input.scanSeed, input.spendPubkey, page.items);
+    const found = await resolvePayments(rpc, matched, input.vault, { includeSwept: input.includeSwept ?? false });
     pages.push(found);
 
     if (!page.mayHaveMore || !page.oldestSignature) break;

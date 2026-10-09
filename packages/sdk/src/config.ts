@@ -20,9 +20,13 @@ export const LOCALNET_PROGRAMS: OpaqPrograms = {
   vault: OPAQ_VAULT_PROGRAM_ADDRESS,
 };
 
+/**
+ * The devnet deployment (upgrade authority and vault admin `BUutTY…iq1g2`). Its IDs are the
+ * same as the committed `declare_id!`s, so they equal `LOCALNET_PROGRAMS`.
+ */
 export const DEVNET_PROGRAMS: OpaqPrograms = {
-  registry: address('6xaXX6KSFxkNohbanstr2Sqpk3teRUExuLQ1u1ndcEyE'),
-  vault: address('JHC14FJWJWAkLNj4aDe1EPr65ideg4tSoZmrdXuZtPA'),
+  registry: address('DaqD6ZznS3TP1NbC2tPrUiBjMNwPbJR3GseHZsBXABNk'),
+  vault: address('9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q'),
 };
 
 export type OpaqCluster = 'localnet' | 'devnet';

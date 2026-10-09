@@ -1,7 +1,6 @@
-import { getBase58Decoder, generateKeyPairSigner, type Signature } from '@solana/kit';
+import { address, getBase58Decoder, generateKeyPairSigner, type Signature } from '@solana/kit';
 import { describe, expect, it } from 'vitest';
 import {
-  DEVNET_PROGRAMS,
   EVENT_IX_TAG,
   extractAnnouncements,
   fetchAnnouncements,
@@ -10,6 +9,13 @@ import {
   type ScanRpc,
   type TransactionLike,
 } from '../src/index.js';
+
+/** Some other deployment (the first devnet one), to check that builders follow `programs`. */
+const OTHER_PROGRAMS = {
+  registry: address('6xaXX6KSFxkNohbanstr2Sqpk3teRUExuLQ1u1ndcEyE'),
+  vault: address('JHC14FJWJWAkLNj4aDe1EPr65ideg4tSoZmrdXuZtPA'),
+};
+
 
 const base58 = getBase58Decoder();
 
@@ -24,9 +30,9 @@ async function eventData(viewTag: number) {
 }
 
 async function announceTx(overrides: { err?: unknown; program?: string; authority?: string } = {}) {
-  const eventAuthority = await findEventAuthorityPda(DEVNET_PROGRAMS.registry);
+  const eventAuthority = await findEventAuthorityPda(OTHER_PROGRAMS.registry);
   const other = (await generateKeyPairSigner()).address;
-  const keys = [other, overrides.program ?? DEVNET_PROGRAMS.registry, overrides.authority ?? eventAuthority];
+  const keys = [other, overrides.program ?? OTHER_PROGRAMS.registry, overrides.authority ?? eventAuthority];
   const tx: TransactionLike = {
     transaction: { message: { accountKeys: keys } },
     meta: {
@@ -39,35 +45,35 @@ async function announceTx(overrides: { err?: unknown; program?: string; authorit
 
 describe('extractAnnouncements', () => {
   it('reads the registry’s own event CPI', async () => {
-    const found = await extractAnnouncements(await announceTx(), DEVNET_PROGRAMS);
+    const found = await extractAnnouncements(await announceTx(), OTHER_PROGRAMS);
     expect(found).toHaveLength(1);
     expect(found[0]!.viewTag).toBe(5);
   });
 
   it('ignores failed transactions, other programs, wrong authority and junk data', async () => {
-    expect(await extractAnnouncements(await announceTx({ err: { InstructionError: [0, 'Custom'] } }), DEVNET_PROGRAMS)).toEqual([]);
+    expect(await extractAnnouncements(await announceTx({ err: { InstructionError: [0, 'Custom'] } }), OTHER_PROGRAMS)).toEqual([]);
     const stranger = (await generateKeyPairSigner()).address;
-    expect(await extractAnnouncements(await announceTx({ program: stranger }), DEVNET_PROGRAMS)).toEqual([]);
-    expect(await extractAnnouncements(await announceTx({ authority: stranger }), DEVNET_PROGRAMS)).toEqual([]);
-    // Same transaction read against the localnet registry finds nothing.
+    expect(await extractAnnouncements(await announceTx({ program: stranger }), OTHER_PROGRAMS)).toEqual([]);
+    expect(await extractAnnouncements(await announceTx({ authority: stranger }), OTHER_PROGRAMS)).toEqual([]);
+    // Same transaction read against the default (local/devnet) registry finds nothing.
     expect(await extractAnnouncements(await announceTx())).toEqual([]);
 
     const junk = await announceTx();
     junk.meta!.innerInstructions![0]!.instructions[0]!.data = '0OIl'; // not base58
-    expect(await extractAnnouncements(junk, DEVNET_PROGRAMS)).toEqual([]);
+    expect(await extractAnnouncements(junk, OTHER_PROGRAMS)).toEqual([]);
   });
 
   it('resolves accounts loaded from lookup tables', async () => {
-    const eventAuthority = await findEventAuthorityPda(DEVNET_PROGRAMS.registry);
+    const eventAuthority = await findEventAuthorityPda(OTHER_PROGRAMS.registry);
     const tx: TransactionLike = {
       transaction: { message: { accountKeys: [(await generateKeyPairSigner()).address] } },
       meta: {
         err: null,
-        loadedAddresses: { writable: [], readonly: [DEVNET_PROGRAMS.registry, eventAuthority] },
+        loadedAddresses: { writable: [], readonly: [OTHER_PROGRAMS.registry, eventAuthority] },
         innerInstructions: [{ instructions: [{ programIdIndex: 1, accounts: [2], data: await eventData(9) }] }],
       },
     };
-    expect(await extractAnnouncements(tx, DEVNET_PROGRAMS)).toHaveLength(1);
+    expect(await extractAnnouncements(tx, OTHER_PROGRAMS)).toHaveLength(1);
   });
 });
 
@@ -92,8 +98,8 @@ describe('fetchAnnouncements', () => {
       getTransaction: (signature: string) => ({ send: async () => transactions.get(signature) ?? null }),
     } as unknown as ScanRpc;
 
-    const page = await fetchAnnouncements(rpc, { programs: DEVNET_PROGRAMS, limit: 3 });
-    expect(queried).toEqual([await findEventAuthorityPda(DEVNET_PROGRAMS.registry)]);
+    const page = await fetchAnnouncements(rpc, { programs: OTHER_PROGRAMS, limit: 3 });
+    expect(queried).toEqual([await findEventAuthorityPda(OTHER_PROGRAMS.registry)]);
     expect(page.items.map((item) => item.signature)).toEqual(['s1', 's3']);
     expect(page.items[0]!.blockTime).toBeNull();
     expect(page.items[1]!.blockTime).toBe(30);

@@ -11,15 +11,15 @@ import {
 
 describe('program IDs', () => {
   it('knows the devnet deployment', () => {
-    expect(DEVNET_PROGRAMS.vault).toBe('JHC14FJWJWAkLNj4aDe1EPr65ideg4tSoZmrdXuZtPA');
-    expect(DEVNET_PROGRAMS.registry).toBe('6xaXX6KSFxkNohbanstr2Sqpk3teRUExuLQ1u1ndcEyE');
+    expect(DEVNET_PROGRAMS.vault).toBe('9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q');
+    expect(DEVNET_PROGRAMS.registry).toBe('DaqD6ZznS3TP1NbC2tPrUiBjMNwPbJR3GseHZsBXABNk');
   });
 
   it('defaults to devnet and lets env override either program', () => {
     expect(configFromEnv({}).programs).toEqual(DEVNET_PROGRAMS);
     expect(configFromEnv({ OPAQ_CLUSTER: 'localnet' }).programs).toEqual(LOCALNET_PROGRAMS);
-    const custom = configFromEnv({ OPAQ_VAULT_PROGRAM_ID: LOCALNET_PROGRAMS.vault });
-    expect(custom.programs).toEqual({ registry: DEVNET_PROGRAMS.registry, vault: LOCALNET_PROGRAMS.vault });
+    const custom = configFromEnv({ OPAQ_VAULT_PROGRAM_ID: 'JHC14FJWJWAkLNj4aDe1EPr65ideg4tSoZmrdXuZtPA' });
+    expect(custom.programs).toEqual({ registry: DEVNET_PROGRAMS.registry, vault: 'JHC14FJWJWAkLNj4aDe1EPr65ideg4tSoZmrdXuZtPA' });
   });
 
   it('rejects bad cluster names and bad addresses', () => {
