@@ -4,7 +4,6 @@
  * Requires `anchor build` at the repo root.
  */
 import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
-import { TOKEN_2022_PROGRAM_ADDRESS } from '@solana-program/token-2022';
 import type { Address, KeyPairSigner } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -15,9 +14,12 @@ import {
   findOwnPayments,
   findWrappedTokenAccount,
   generateMetaKeys,
+  getCreateWrappedTokenAccountInstruction,
   getPayToMetaAddressInstructions,
   getRegisterHandleInstruction,
   getSweepToVaultInstructions,
+  getWithdrawFromVaultInstruction,
+  scanForPayments,
   vault,
   type MetaKeys,
   type OwnPayment,
@@ -130,9 +132,48 @@ describe('Opaq full flow', () => {
     expect(expectedAta).toBe(stealthTokenAccount);
   });
 
+  it('scans the chain for the payment without any transaction hint', async () => {
+    const scan = await scanForPayments(net.rpc, {
+      scanSeed: recipientKeys.scanSeed,
+      spendPubkey: recipientKeys.spendPubkey,
+      vault: settings,
+    });
+    expect(scan.complete).toBe(true);
+    expect(scan.payments).toHaveLength(1);
+    expect(scan.payments[0]).toMatchObject({
+      signature: paySignature,
+      stealthAddress: ownPayment.stealthAddress,
+      tokenAccount: stealthTokenAccount,
+      amount: PAYMENT,
+    });
+
+    const stranger = generateMetaKeys();
+    const none = await scanForPayments(net.rpc, {
+      scanSeed: stranger.scanSeed,
+      spendPubkey: stranger.spendPubkey,
+      vault: settings,
+    });
+    expect(none.payments).toHaveLength(0);
+
+    // Resuming from the newest signature of the previous run finds nothing new.
+    const again = await scanForPayments(net.rpc, {
+      scanSeed: recipientKeys.scanSeed,
+      spendPubkey: recipientKeys.spendPubkey,
+      vault: settings,
+      until: scan.newestSignature!,
+    });
+    expect(again.payments).toHaveLength(0);
+  });
+
   it('sweeps the payment into the vault with the relayer paying fees', async () => {
     const stealthSigner = createStealthSigner(deriveStealthScalar(recipientKeys.spendSeed, ownPayment.tweak));
-    const destination = await net.createAta(recipientWallet.address, settings.wrappedMint, TOKEN_2022_PROGRAM_ADDRESS);
+    const { instruction: createWrapped, wrappedTokenAccount: destination } =
+      await getCreateWrappedTokenAccountInstruction({
+        payer: relayer,
+        owner: recipientWallet.address,
+        vault: settings,
+      });
+    await net.send([createWrapped], relayer);
     expect(destination).toBe(await findWrappedTokenAccount(recipientWallet.address, settings.wrappedMint));
 
     const relayerLamportsBefore = (await net.rpc.getBalance(relayer.address).send()).value;
@@ -149,6 +190,11 @@ describe('Opaq full flow', () => {
     );
 
     expect(await net.tokenBalance(destination)).toBe(PAYMENT - FEE);
+
+    const afterSweep = { scanSeed: recipientKeys.scanSeed, spendPubkey: recipientKeys.spendPubkey, vault: settings };
+    expect((await scanForPayments(net.rpc, afterSweep)).payments).toHaveLength(0);
+    const swept = (await scanForPayments(net.rpc, { ...afterSweep, includeSwept: true })).payments;
+    expect(swept.map((payment) => payment.amount)).toEqual([0n]);
     expect(await net.tokenBalance(settings.vault)).toBe(PAYMENT - FEE);
     expect(await net.tokenBalance(treasury)).toBe(FEE);
     expect(await net.accountExists(stealthTokenAccount)).toBe(false);
@@ -160,18 +206,7 @@ describe('Opaq full flow', () => {
     const wrapped = await findWrappedTokenAccount(recipientWallet.address, settings.wrappedMint);
     const usdcAccount = await net.createAta(recipientWallet.address, usdc);
     await net.send(
-      [
-        await vault.getWithdrawInstructionAsync({
-          owner: recipientWallet,
-          underlyingMint: usdc,
-          wrappedMint: settings.wrappedMint,
-          ownerWrapped: wrapped,
-          vault: settings.vault,
-          destination: usdcAccount,
-          underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
-          amount: PAYMENT - FEE,
-        }),
-      ],
+      [await getWithdrawFromVaultInstruction({ owner: recipientWallet, vault: settings, amount: PAYMENT - FEE })],
       recipientWallet,
     );
 
