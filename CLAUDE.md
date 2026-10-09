@@ -102,7 +102,28 @@ JS workspaces:
   - `decodeAnnouncementEventCpi` (untrusted chain data → `Announcement | null`), `findOwnPayments`
   - `fetchVaultSettings(rpc)`, `getSweepToVaultInstructions` – `deposit` signed by the stealth signer,
     then close the stealth ATA with rent to `rentRecipient` (relayer). Fee payer = relayer.
+- `src/config.ts` – `OpaqConfig`: `DEVNET_PROGRAMS` / `LOCALNET_PROGRAMS`, `configFromEnv` (see
+  `.env.example`) and the chain feature flag `OPAQ_ENABLED_CHAINS` (MVP: `solana` only; `base`/`arbitrum`
+  are rejected until CCTP lands). Builders take an optional `programs`; the default is the local build's
+  IDs. `fetchVaultSettings` returns `programAddress`, which the sweep/withdraw builders reuse.
+- `src/scanner.ts` – `fetchAnnouncements` (pages `getSignaturesForAddress` on the registry's event
+  authority), `extractAnnouncements`, `scanForPayments` (scan key only; cursor via `until`/`before`),
+  `getStealthTokenBalance`. Also `getCreateWrappedTokenAccountInstruction` and
+  `getWithdrawFromVaultInstruction` in builders (public wrapper balance only).
+- `src/keys.ts` – HKDF master-seed → meta keys, wallet-signature derivation, scan-only viewing key
+  (`opaqvk1…`). It does not unlock confidential wrapper balances (pending the CT decision).
 - `src/generated/{registry,vault}` – Codama clients, exported as `registry` and `vault`.
+
+## Devnet
+
+- Both programs are deployed (IDs in `DEVNET_PROGRAMS`, `src/config.ts`); the vault config was
+  initialised with Circle devnet USDC (`4zMMC9…ncDU`), 50 bps fee, and a freshly created wrapper mint.
+  `init_config` is unrestricted and one-shot: the caller becomes admin, so never run it on a shared
+  deployment without agreement.
+- The Solana CLI default RPC is often localnet; scripts here pass the RPC explicitly and refuse non-devnet.
+- `tests/scripts/init-devnet.ts` – one-time vault setup (dry run unless `--yes`).
+- `tests/scripts/smoke-devnet.ts` – register → pay → scan → sweep → withdraw on devnet; needs
+  `OPAQ_SMOKE_SEED_FILE` (outside the repo) and a little devnet USDC/SOL. Last passed with handle `opaq_test`.
 
 ## Programs
 
