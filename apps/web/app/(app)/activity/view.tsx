@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ErrorBanner, LoadingRows } from "@/components/DataStates";
 import { MarkArt } from "@/components/MarkArt";
 import { PaymentRow } from "@/components/PaymentRow";
 import { PageHead } from "@/components/PageHead";
@@ -15,13 +16,14 @@ const FILTERS: { key: "all" | PaymentStatus; label: string }[] = [
 ];
 
 export function ActivityView() {
-  const { payments } = useSession();
+  const { payments, dataState } = useSession();
   const [filter, setFilter] = useState<"all" | PaymentStatus>("all");
   const items = payments.filter((p) => filter === "all" || p.status === filter);
 
   return (
     <>
       <PageHead title="Activity">Every payment that reached you, and every cash out.</PageHead>
+      <ErrorBanner />
       <div className="chips" role="group" aria-label="Filter activity">
         {FILTERS.map((f) => (
           <button key={f.key} type="button" className="chip" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>
@@ -29,7 +31,9 @@ export function ActivityView() {
           </button>
         ))}
       </div>
-      {!payments.length ? (
+      {dataState === "loading" ? (
+        <LoadingRows count={4} />
+      ) : dataState === "error" ? null : !payments.length ? (
         <div className="list empty">
           <MarkArt className="empty-art" />
           <h3>No payments yet</h3>

@@ -245,3 +245,29 @@ dialog[open] { animation: pop 160ms ease; }
 .btn .ic { margin-top: 0; }
 
 .st { white-space: nowrap; }
+
+/* ---------- Account flow ---------- */
+.btn:disabled { cursor: not-allowed; opacity: 0.7; }
+.soon-chip { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--muted); }
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-ctl); background: var(--surface2); font-size: 14px; color: var(--muted); }
+.notice .ic { margin-top: 2px; color: var(--brand); }
+.btn img { border-radius: 4px; }
+.banner-error { background: var(--danger-soft); border-color: var(--danger); }
+.banner-error .ic { color: var(--danger); }
+.hero-ph { width: 5ch; height: 0.8em; color: #fff; opacity: 0.45; }
+.muted-hero { font-size: 0.6em; font-weight: 600; color: #e3eafe; }
+
+/* ---------- Payer page ---------- */
+.pay-shell { min-height: 100vh; }
+.pay-main { display: grid; place-items: start center; padding: 40px 16px 64px; }
+.pay-card { width: min(460px, 100%); padding: 32px; }
+.pay-form { display: grid; gap: 16px; width: 100%; justify-items: stretch; }
+.pay-title, .pay-card h1 { font-size: 1.75rem; letter-spacing: -0.02em; }
+.small { font-size: 14px; }
+.sig { font-size: 12px; color: var(--muted); word-break: break-all; }
+.fine { display: flex; gap: 6px; align-items: flex-start; }
+.fine .ic { margin-top: 3px; flex: none; }
+@media (max-width: 520px) { .pay-card { padding: 24px; } }
+dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 20px; }
+dl.kv dt { color: var(--muted); }
+dl.kv dd { text-align: right; word-break: break-all; }

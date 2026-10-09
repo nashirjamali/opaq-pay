@@ -4,13 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3000",
-    "build": "next build",
+    "dev": "pnpm --filter @opaq/sdk build && next dev --port 3000",
+    "build": "pnpm --filter @opaq/sdk build && next build",
     "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "pnpm --filter @opaq/sdk build && next typegen && tsc --noEmit",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@opaq/sdk": "workspace:^",
+    "@solana/kit": "^8.4.0",
+    "@solana/wallet-standard-features": "^1.5.0",
+    "@wallet-standard/app": "^1.1.1",
+    "@wallet-standard/base": "^1.1.1",
+    "@wallet-standard/features": "^1.1.1",
     "next": "^16.4.0",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",

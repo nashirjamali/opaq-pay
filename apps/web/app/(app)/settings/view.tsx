@@ -5,7 +5,7 @@ import { PageHead } from "@/components/PageHead";
 import { useSession } from "@/lib/session";
 
 export function SettingsView() {
-  const { isDemo, handle, openAuth, signOut } = useSession();
+  const { isDemo, handle, account, openAuth, signOut } = useSession();
   return (
     <>
       <PageHead title="Settings">Your account and how Opaq looks for you.</PageHead>
@@ -20,7 +20,13 @@ export function SettingsView() {
           <>
             <section className="card stack" style={{ gap: 14 }}>
               <h2 className="h-ic"><Icon as={GlyphUser} size={20} /> Account</h2>
-              <p>Handle: <strong>@{handle}</strong></p>
+              <dl className="kv">
+                <dt>Handle</dt>
+                <dd>@{handle}</dd>
+                <dt>Wallet</dt>
+                <dd className="mono" title={account?.address}>{account ? `${account.address.slice(0, 4)}…${account.address.slice(-4)}` : ""}</dd>
+              </dl>
+              <p className="muted">Your handle and the wallet that registered it are public on chain.</p>
               <div><button type="button" className="btn btn-secondary" onClick={signOut}><Icon as={GlyphSignOut} />Sign out</button></div>
             </section>
             <section className="card stack" style={{ gap: 14 }}>

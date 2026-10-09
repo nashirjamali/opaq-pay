@@ -5,9 +5,9 @@ import { GlyphCheck, GlyphCopy, GlyphLink, GlyphRequest, GlyphWallet, Icon } fro
 import { Logo } from "@/components/Logo";
 import { PageHead } from "@/components/PageHead";
 import { QrCode } from "@/components/QrCode";
-import { LINK_BASE } from "@/lib/config";
 import { useSession } from "@/lib/session";
 import { useCopy } from "@/lib/useCopy";
+import { payLink, useOrigin } from "@/lib/useOrigin";
 
 export function ReceiveView() {
   const { handle, requireAccount } = useSession();
@@ -19,7 +19,10 @@ export function ReceiveView() {
   if (amount.trim()) query.set("amount", amount.trim());
   if (note.trim()) query.set("note", note.trim());
   const qs = query.toString();
-  const url = LINK_BASE + handle + (qs ? `?${qs}` : "");
+  const origin = useOrigin();
+  const base = payLink(origin, handle);
+  const url = base.href + (qs ? `?${qs}` : "");
+  const shown = base.label + (qs ? `?${qs}` : "");
 
   return (
     <>
@@ -30,13 +33,13 @@ export function ReceiveView() {
             <h2 id="your-link" className="h-ic"><Icon as={GlyphLink} size={20} /> Your link</h2>
             <div className="link-qr">
               <div>
-                <div className="linkbox mono">{url}</div>
+                <div className="linkbox mono">{shown}</div>
                 <button type="button" className="btn btn-primary" onClick={() => requireAccount("copy", () => copy(url))}>
                   <Icon as={copied ? GlyphCheck : GlyphCopy} />
                   {copied ? "Copied" : "Copy link"}
                 </button>
               </div>
-              <QrCode value={`https://${url}`} />
+              {origin && <QrCode value={url} />}
             </div>
           </section>
           <section className="card" aria-labelledby="ask">
