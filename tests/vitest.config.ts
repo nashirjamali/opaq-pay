@@ -4,7 +4,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     // Test the SDK from source so `pnpm build` is not a prerequisite.
-    alias: { '@opaq/sdk': fileURLToPath(new URL('../packages/sdk/src/index.ts', import.meta.url)) },
+    alias: [
+      {
+        find: /^@opaq\/sdk\/confidential$/,
+        replacement: fileURLToPath(new URL('../packages/sdk/src/confidential.ts', import.meta.url)),
+      },
+      { find: /^@opaq\/sdk$/, replacement: fileURLToPath(new URL('../packages/sdk/src/index.ts', import.meta.url)) },
+    ],
   },
   test: {
     include: ['**/*.test.ts'],

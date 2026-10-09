@@ -21,7 +21,10 @@ import {
   createSolanaRpc,
   createSolanaRpcSubscriptions,
   createTransactionMessage,
+  createTransactionPlanExecutor,
+  createTransactionPlanner,
   generateKeyPairSigner,
+  getAddressEncoder,
   getBase58Encoder,
   getSignatureFromTransaction,
   pipe,
@@ -31,12 +34,13 @@ import {
   signTransactionMessageWithSigners,
   type Address,
   type Instruction,
+  type InstructionPlan,
   type KeyPairSigner,
   type Signature,
   type TransactionSigner,
 } from '@solana/kit';
 import { fileURLToPath } from 'node:url';
-import { decodeAnnouncementEventCpi, registry, vault, type Announcement } from '@opaq/sdk';
+import { decodeAnnouncementEventCpi, findProgramDataAddress, registry, vault, type Announcement } from '@opaq/sdk';
 
 const deployDir = fileURLToPath(new URL('../target/deploy/', import.meta.url));
 
@@ -53,6 +57,19 @@ export async function startTestNet() {
   const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
   const admin = await createKeyPairSignerFromBytes(surfnet.payerSecretKey);
 
+  // `surfnet.deploy` leaves no upgrade authority; make the admin the vault's, as on a real
+  // deployment, so it may call `init_config`.
+  {
+    const programData = await findProgramDataAddress(vault.OPAQ_VAULT_PROGRAM_ADDRESS);
+    const { value } = await rpc.getAccountInfo(programData, { encoding: 'base64' }).send();
+    if (!value) throw new Error('vault ProgramData missing');
+    const data = new Uint8Array(Buffer.from(value.data[0], 'base64'));
+    // UpgradeableLoaderState::ProgramData: u32 tag, u64 slot, Option<Pubkey> (u8 tag + 32 bytes).
+    data[12] = 1;
+    data.set(getAddressEncoder().encode(admin.address), 13);
+    surfnet.setAccount(programData, Number(value.lamports), data, value.owner);
+  }
+
   async function send(instructions: Instruction[], feePayer: TransactionSigner): Promise<Signature> {
     const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
     const message = pipe(
@@ -65,6 +82,46 @@ export async function startTestNet() {
     assertIsTransactionWithBlockhashLifetime(transaction);
     await sendAndConfirm(transaction, { commitment: 'confirmed' });
     return getSignatureFromTransaction(transaction);
+  }
+
+  /** Sends a multi-transaction instruction plan (e.g. confidential-transfer proofs) in order. */
+  async function sendPlan(plan: InstructionPlan, feePayer: TransactionSigner): Promise<Signature[]> {
+    const signatures: Signature[] = [];
+    const planner = createTransactionPlanner({
+      createTransactionMessage: async () => {
+        const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+        return pipe(
+          createTransactionMessage({ version: 0 }),
+          (m) => setTransactionMessageFeePayerSigner(feePayer, m),
+          (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+        );
+      },
+    });
+    const executor = createTransactionPlanExecutor({
+      executeTransactionMessage: async (_context, message) => {
+        const transaction = await signTransactionMessageWithSigners(message);
+        assertIsTransactionWithBlockhashLifetime(transaction);
+        await sendAndConfirm(transaction, { commitment: 'confirmed' });
+        const signature = getSignatureFromTransaction(transaction);
+        signatures.push(signature);
+        return { signature };
+      },
+    });
+    await executor(await planner(plan));
+    return signatures;
+  }
+
+  /** Every account a confirmed transaction touched. */
+  async function accountsIn(signature: Signature): Promise<string[]> {
+    const transaction = await rpc
+      .getTransaction(signature, { encoding: 'json', maxSupportedTransactionVersion: 0, commitment: 'confirmed' })
+      .send();
+    if (!transaction) throw new Error(`Transaction ${signature} not found`);
+    return [
+      ...transaction.transaction.message.accountKeys,
+      ...(transaction.meta?.loadedAddresses?.writable ?? []),
+      ...(transaction.meta?.loadedAddresses?.readonly ?? []),
+    ];
   }
 
   async function fundedSigner(lamports = 2_000_000_000): Promise<KeyPairSigner> {
@@ -101,11 +158,12 @@ export async function startTestNet() {
     return mint.address;
   }
 
-  /** Token-2022 wrapper mint with Confidential Transfer, no freeze authority. */
+  /** Token-2022 wrapper mint with locked Confidential Transfer, no freeze authority. */
   async function createWrappedMint(mintAuthority: Address): Promise<Address> {
     const mint = await generateKeyPairSigner();
+    // Locked confidential settings, as `init_config` requires: no authority, no auditor.
     const confidential = extension('ConfidentialTransferMint', {
-      authority: admin.address,
+      authority: null,
       autoApproveNewAccounts: true,
       auditorElgamalPubkey: null,
     });
@@ -159,6 +217,8 @@ export async function startTestNet() {
     rpc,
     admin,
     send,
+    sendPlan,
+    accountsIn,
     fundedSigner,
     tokenBalance,
     accountExists,
