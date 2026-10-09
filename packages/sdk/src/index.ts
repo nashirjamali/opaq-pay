@@ -1,6 +1,7 @@
 export * from './config.js';
 export * from './stealth.js';
 export * from './signer.js';
+export * from './keys.js';
 export * from './builders.js';
 export * from './scanner.js';
 
