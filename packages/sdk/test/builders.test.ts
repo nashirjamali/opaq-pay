@@ -7,9 +7,11 @@ import {
   decodeAnnouncementEventCpi,
   deriveStealthScalar,
   EVENT_IX_TAG,
+  findEventAuthorityPda,
   findOwnPayments,
   generateMetaKeys,
   getPayToMetaAddressInstructions,
+  DEVNET_PROGRAMS,
   getRegisterHandleInstruction,
   getSweepToVaultInstructions,
   isValidHandleName,
@@ -138,6 +140,7 @@ describe('sweeping into the vault', () => {
 
     const [config] = await vault.findConfigPda();
     const settings: VaultSettings = {
+      programAddress: vault.OPAQ_VAULT_PROGRAM_ADDRESS,
       config,
       underlyingMint: USDC,
       wrappedMint: (await generateKeyPairSigner()).address,
@@ -167,5 +170,28 @@ describe('sweeping into the vault', () => {
 
     expect(close!.programAddress).toBe(TOKEN_PROGRAM_ADDRESS);
     expect(close!.accounts?.map((a) => a.address)).toEqual([stealthTokenAccount, relayer, payment.stealthAddress]);
+  });
+});
+
+describe('targeting a deployment', () => {
+  it('derives handle PDA, event authority and announce from the configured registry', async () => {
+    const owner = await generateKeyPairSigner();
+    const meta = generateMetaKeys();
+    const ix = await getRegisterHandleInstruction({ owner, name: 'raka', meta, programs: DEVNET_PROGRAMS });
+    const [handle] = await registry.findHandlePda({ name: 'raka' }, { programAddress: DEVNET_PROGRAMS.registry });
+    expect(ix.programAddress).toBe(DEVNET_PROGRAMS.registry);
+    expect(ix.accounts?.map((a) => a.address)).toContain(handle);
+
+    const pay = await getPayToMetaAddressInstructions({
+      payer: owner,
+      meta,
+      mint: USDC,
+      decimals: 6,
+      amount: 1n,
+      programs: DEVNET_PROGRAMS,
+    });
+    const announce = pay.instructions[2]!;
+    expect(announce.programAddress).toBe(DEVNET_PROGRAMS.registry);
+    expect(announce.accounts?.map((a) => a.address)).toContain(await findEventAuthorityPda(DEVNET_PROGRAMS.registry));
   });
 });

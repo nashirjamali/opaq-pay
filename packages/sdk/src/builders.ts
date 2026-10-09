@@ -22,6 +22,7 @@ import {
   type Rpc,
   type TransactionSigner,
 } from '@solana/kit';
+import { LOCALNET_PROGRAMS, type OpaqPrograms } from './config.js';
 import * as registry from './generated/registry/index.js';
 import * as vault from './generated/vault/index.js';
 import { deriveStealthPayment, scanAnnouncement, type Announcement, type MetaAddress, type StealthPayment } from './stealth.js';
@@ -36,9 +37,7 @@ export function isValidHandleName(name: string): boolean {
 }
 
 /** Anchor `emit_cpi!` authority for a program. */
-export async function findEventAuthorityPda(
-  programAddress: Address = registry.OPAQ_REGISTRY_PROGRAM_ADDRESS,
-): Promise<Address> {
+export async function findEventAuthorityPda(programAddress: Address = LOCALNET_PROGRAMS.registry): Promise<Address> {
   const [pda] = await getProgramDerivedAddress({
     programAddress,
     seeds: [getUtf8Encoder().encode('__event_authority')],
@@ -54,25 +53,31 @@ export async function getRegisterHandleInstruction(input: {
   owner: TransactionSigner;
   name: string;
   meta: MetaAddress;
+  programs?: OpaqPrograms;
 }): Promise<Instruction> {
   if (!isValidHandleName(input.name)) throw new Error(`Invalid handle: ${input.name}`);
-  return registry.getRegisterHandleInstructionAsync({
-    owner: input.owner,
-    name: input.name,
-    scanPubkey: input.meta.scanPubkey,
-    spendPubkey: input.meta.spendPubkey,
-  });
+  return registry.getRegisterHandleInstructionAsync(
+    {
+      owner: input.owner,
+      name: input.name,
+      scanPubkey: input.meta.scanPubkey,
+      spendPubkey: input.meta.spendPubkey,
+    },
+    { programAddress: (input.programs ?? LOCALNET_PROGRAMS).registry },
+  );
 }
 
 /** Looks up a handle's meta-address. Returns null when the handle does not exist. */
 export async function fetchMetaAddress(
   rpc: Rpc<GetAccountInfoApi>,
   name: string,
+  programs: OpaqPrograms = LOCALNET_PROGRAMS,
 ): Promise<(MetaAddress & { handle: Address; owner: Address }) | null> {
   if (!isValidHandleName(name)) return null;
-  const [handle] = await registry.findHandlePda({ name });
+  const [handle] = await registry.findHandlePda({ name }, { programAddress: programs.registry });
   const account = await registry.fetchMaybeHandle(rpc, handle);
   if (!account.exists) return null;
+  if (account.programAddress !== programs.registry) throw new Error('Handle account is not owned by opaq_registry');
   return {
     handle,
     owner: account.data.owner,
@@ -94,6 +99,7 @@ export type PayToMetaAddressInput = {
   /** Payer's token account; defaults to the payer's ATA for `mint`. */
   source?: Address;
   tokenProgram?: Address;
+  programs?: OpaqPrograms;
   /** Deterministic tests only. Production callers must omit it. */
   ephemeralSeed?: Uint8Array;
 };
@@ -114,6 +120,7 @@ export async function getPayToMetaAddressInstructions(
 ): Promise<PayToMetaAddressResult> {
   if (input.amount <= 0n) throw new Error('Amount must be greater than zero');
   const tokenProgram = input.tokenProgram ?? TOKEN_PROGRAM_ADDRESS;
+  const registryProgram = (input.programs ?? LOCALNET_PROGRAMS).registry;
   const payment = deriveStealthPayment(input.meta, input.ephemeralSeed);
 
   const [stealthTokenAccount] = await findAssociatedTokenPda({
@@ -144,14 +151,17 @@ export async function getPayToMetaAddressInstructions(
       },
       { programAddress: tokenProgram },
     ),
-    registry.getAnnounceInstruction({
-      announcer: input.payer,
-      eventAuthority: await findEventAuthorityPda(),
-      program: registry.OPAQ_REGISTRY_PROGRAM_ADDRESS,
-      ephemeralPubkey: payment.ephemeralPubkey,
-      stealthAddress: payment.stealthAddress,
-      viewTag: payment.viewTag,
-    }),
+    registry.getAnnounceInstruction(
+      {
+        announcer: input.payer,
+        eventAuthority: await findEventAuthorityPda(registryProgram),
+        program: registryProgram,
+        ephemeralPubkey: payment.ephemeralPubkey,
+        stealthAddress: payment.stealthAddress,
+        viewTag: payment.viewTag,
+      },
+      { programAddress: registryProgram },
+    ),
   ];
 
   return { instructions, payment, stealthTokenAccount };
@@ -205,6 +215,8 @@ export function findOwnPayments(
 // ---------------------------------------------------------------------------
 
 export type VaultSettings = {
+  /** The `opaq_vault` program these settings were read from. */
+  programAddress: Address;
   config: Address;
   underlyingMint: Address;
   wrappedMint: Address;
@@ -215,15 +227,20 @@ export type VaultSettings = {
 };
 
 /** Reads the vault config and the underlying mint's token program. */
-export async function fetchVaultSettings(rpc: Rpc<GetAccountInfoApi>): Promise<VaultSettings> {
-  const [config] = await vault.findConfigPda();
+export async function fetchVaultSettings(
+  rpc: Rpc<GetAccountInfoApi>,
+  programs: OpaqPrograms = LOCALNET_PROGRAMS,
+): Promise<VaultSettings> {
+  const [config] = await vault.findConfigPda({ programAddress: programs.vault });
   const account = await vault.fetchConfig(rpc, config);
+  if (account.programAddress !== programs.vault) throw new Error('Vault config is not owned by opaq_vault');
   const mint = await fetchEncodedAccount(rpc, account.data.underlyingMint);
   if (!mint.exists) throw new Error('Underlying mint not found');
   if (mint.programAddress !== TOKEN_PROGRAM_ADDRESS && mint.programAddress !== TOKEN_2022_PROGRAM_ADDRESS) {
     throw new Error('Underlying mint is not owned by a token program');
   }
   return {
+    programAddress: programs.vault,
     config,
     underlyingMint: account.data.underlyingMint,
     wrappedMint: account.data.wrappedMint,
@@ -261,19 +278,22 @@ export async function getSweepToVaultInstructions(input: SweepToVaultInput): Pro
   });
 
   return [
-    vault.getDepositInstruction({
-      depositor: input.stealthSigner,
-      config: settings.config,
-      underlyingMint: settings.underlyingMint,
-      wrappedMint: settings.wrappedMint,
-      depositorToken: stealthTokenAccount,
-      vault: settings.vault,
-      treasury: settings.treasury,
-      destination: input.destination,
-      underlyingTokenProgram: settings.underlyingTokenProgram,
-      wrappedTokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
-      amount: input.amount,
-    }),
+    vault.getDepositInstruction(
+      {
+        depositor: input.stealthSigner,
+        config: settings.config,
+        underlyingMint: settings.underlyingMint,
+        wrappedMint: settings.wrappedMint,
+        depositorToken: stealthTokenAccount,
+        vault: settings.vault,
+        treasury: settings.treasury,
+        destination: input.destination,
+        underlyingTokenProgram: settings.underlyingTokenProgram,
+        wrappedTokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+        amount: input.amount,
+      },
+      { programAddress: settings.programAddress },
+    ),
     getCloseAccountInstruction(
       { account: stealthTokenAccount, destination: input.rentRecipient, owner: input.stealthSigner },
       { programAddress: settings.underlyingTokenProgram },

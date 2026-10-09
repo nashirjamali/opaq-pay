@@ -1,3 +1,4 @@
+export * from './config.js';
 export * from './stealth.js';
 export * from './signer.js';
 export * from './builders.js';
