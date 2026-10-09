@@ -30,13 +30,22 @@ export const OPAQ_VAULT_ERROR__FREEZE_AUTHORITY_SET = 0x1775; // 6005
 export const OPAQ_VAULT_ERROR__WRAPPER_SUPPLY_NOT_ZERO = 0x1776; // 6006
 /** Unauthorized: Only the admin can perform this action */
 export const OPAQ_VAULT_ERROR__UNAUTHORIZED = 0x1777; // 6007
+/** NotUpgradeAuthority: Only the program's upgrade authority can initialize the vault */
+export const OPAQ_VAULT_ERROR__NOT_UPGRADE_AUTHORITY = 0x1778; // 6008
+/** ConfidentialMintNotLocked: Wrapper mint's confidential-transfer settings must have no authority, no auditor, and auto-approve */
+export const OPAQ_VAULT_ERROR__CONFIDENTIAL_MINT_NOT_LOCKED = 0x1779; // 6009
+/** NotProposedAdmin: Only the proposed admin can accept */
+export const OPAQ_VAULT_ERROR__NOT_PROPOSED_ADMIN = 0x177a; // 6010
 
 export type OpaqVaultError =
   | typeof OPAQ_VAULT_ERROR__AMOUNT_TOO_SMALL
+  | typeof OPAQ_VAULT_ERROR__CONFIDENTIAL_MINT_NOT_LOCKED
   | typeof OPAQ_VAULT_ERROR__FEE_TOO_HIGH
   | typeof OPAQ_VAULT_ERROR__FREEZE_AUTHORITY_SET
   | typeof OPAQ_VAULT_ERROR__MATH_OVERFLOW
   | typeof OPAQ_VAULT_ERROR__MISSING_CONFIDENTIAL_TRANSFER
+  | typeof OPAQ_VAULT_ERROR__NOT_PROPOSED_ADMIN
+  | typeof OPAQ_VAULT_ERROR__NOT_UPGRADE_AUTHORITY
   | typeof OPAQ_VAULT_ERROR__UNAUTHORIZED
   | typeof OPAQ_VAULT_ERROR__WRAPPER_SUPPLY_NOT_ZERO
   | typeof OPAQ_VAULT_ERROR__ZERO_AMOUNT;
@@ -45,10 +54,13 @@ let opaqVaultErrorMessages: Record<OpaqVaultError, string> | undefined;
 if (process.env["NODE_ENV"] !== "production") {
   opaqVaultErrorMessages = {
     [OPAQ_VAULT_ERROR__AMOUNT_TOO_SMALL]: `Amount after fee must be greater than zero`,
+    [OPAQ_VAULT_ERROR__CONFIDENTIAL_MINT_NOT_LOCKED]: `Wrapper mint's confidential-transfer settings must have no authority, no auditor, and auto-approve`,
     [OPAQ_VAULT_ERROR__FEE_TOO_HIGH]: `Fee exceeds the 1% cap`,
     [OPAQ_VAULT_ERROR__FREEZE_AUTHORITY_SET]: `Wrapper mint must have no freeze authority`,
     [OPAQ_VAULT_ERROR__MATH_OVERFLOW]: `Arithmetic overflow`,
     [OPAQ_VAULT_ERROR__MISSING_CONFIDENTIAL_TRANSFER]: `Wrapper mint must have the Confidential Transfer extension`,
+    [OPAQ_VAULT_ERROR__NOT_PROPOSED_ADMIN]: `Only the proposed admin can accept`,
+    [OPAQ_VAULT_ERROR__NOT_UPGRADE_AUTHORITY]: `Only the program's upgrade authority can initialize the vault`,
     [OPAQ_VAULT_ERROR__UNAUTHORIZED]: `Only the admin can perform this action`,
     [OPAQ_VAULT_ERROR__WRAPPER_SUPPLY_NOT_ZERO]: `Wrapper mint must have zero supply at initialization`,
     [OPAQ_VAULT_ERROR__ZERO_AMOUNT]: `Amount must be greater than zero`,

@@ -56,6 +56,9 @@ export function getInitConfigDiscriminatorBytes(): ReadonlyUint8Array {
 export type InitConfigInstruction<
   TProgram extends string = typeof OPAQ_VAULT_PROGRAM_ADDRESS,
   TAccountAdmin extends string | AccountMeta<string> = string,
+  TAccountProgram extends string | AccountMeta<string> =
+    "9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q",
+  TAccountProgramData extends string | AccountMeta<string> = string,
   TAccountConfig extends string | AccountMeta<string> = string,
   TAccountUnderlyingMint extends string | AccountMeta<string> = string,
   TAccountWrappedMint extends string | AccountMeta<string> = string,
@@ -75,6 +78,12 @@ export type InitConfigInstruction<
         ? WritableSignerAccount<TAccountAdmin> &
             AccountSignerMeta<TAccountAdmin>
         : TAccountAdmin,
+      TAccountProgram extends string
+        ? ReadonlyAccount<TAccountProgram>
+        : TAccountProgram,
+      TAccountProgramData extends string
+        ? ReadonlyAccount<TAccountProgramData>
+        : TAccountProgramData,
       TAccountConfig extends string
         ? WritableAccount<TAccountConfig>
         : TAccountConfig,
@@ -139,6 +148,8 @@ export function getInitConfigInstructionDataCodec(): FixedSizeCodec<
 
 export type InitConfigAsyncInput<
   TAccountAdmin extends InstructionSignerInput = InstructionSignerInput,
+  TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountProgramData extends InstructionAccountInput = InstructionAccountInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
   TAccountUnderlyingMint extends InstructionAccountInput =
     InstructionAccountInput,
@@ -153,6 +164,8 @@ export type InitConfigAsyncInput<
     InstructionAccountInput,
 > = {
   admin: TAccountAdmin;
+  program?: TAccountProgram;
+  programData: TAccountProgramData;
   config?: TAccountConfig;
   underlyingMint: TAccountUnderlyingMint;
   wrappedMint: TAccountWrappedMint;
@@ -166,6 +179,8 @@ export type InitConfigAsyncInput<
 
 export async function getInitConfigInstructionAsync<
   TAccountAdmin extends InstructionSignerInput,
+  TAccountProgram extends InstructionAccountInput,
+  TAccountProgramData extends InstructionAccountInput,
   TAccountConfig extends InstructionAccountInput,
   TAccountUnderlyingMint extends InstructionAccountInput,
   TAccountWrappedMint extends InstructionAccountInput,
@@ -178,6 +193,8 @@ export async function getInitConfigInstructionAsync<
 >(
   input: InitConfigAsyncInput<
     TAccountAdmin,
+    TAccountProgram,
+    TAccountProgramData,
     TAccountConfig,
     TAccountUnderlyingMint,
     TAccountWrappedMint,
@@ -194,6 +211,14 @@ export async function getInitConfigInstructionAsync<
     ResolvedInstructionAccountMeta<
       TAccountAdmin,
       InstructionAccountInputAddress<TAccountAdmin>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountProgram,
+      InstructionAccountInputAddress<TAccountProgram>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountProgramData,
+      InstructionAccountInputAddress<TAccountProgramData>
     >,
     ResolvedInstructionAccountMeta<
       TAccountConfig,
@@ -238,6 +263,16 @@ export async function getInitConfigInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     admin: { value: input.admin ?? null, isSigner: true, isWritable: true },
+    program: {
+      value: input.program ?? null,
+      isSigner: false,
+      isWritable: false,
+    },
+    programData: {
+      value: input.programData ?? null,
+      isSigner: false,
+      isWritable: false,
+    },
     config: { value: input.config ?? null, isSigner: false, isWritable: true },
     underlyingMint: {
       value: input.underlyingMint ?? null,
@@ -280,6 +315,10 @@ export async function getInitConfigInstructionAsync<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.program.value) {
+    accounts.program.value =
+      "9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q" as Address<"9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q">;
+  }
   if (!accounts.config.value) {
     accounts.config.value = await findConfigPda({ programAddress });
   }
@@ -306,6 +345,8 @@ export async function getInitConfigInstructionAsync<
   return Object.freeze({
     accounts: [
       getAccountMeta("admin", accounts.admin),
+      getAccountMeta("program", accounts.program),
+      getAccountMeta("programData", accounts.programData),
       getAccountMeta("config", accounts.config),
       getAccountMeta("underlyingMint", accounts.underlyingMint),
       getAccountMeta("wrappedMint", accounts.wrappedMint),
@@ -324,6 +365,14 @@ export async function getInitConfigInstructionAsync<
     ResolvedInstructionAccountMeta<
       TAccountAdmin,
       InstructionAccountInputAddress<TAccountAdmin>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountProgram,
+      InstructionAccountInputAddress<TAccountProgram>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountProgramData,
+      InstructionAccountInputAddress<TAccountProgramData>
     >,
     ResolvedInstructionAccountMeta<
       TAccountConfig,
@@ -362,6 +411,8 @@ export async function getInitConfigInstructionAsync<
 
 export type InitConfigInput<
   TAccountAdmin extends InstructionSignerInput = InstructionSignerInput,
+  TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountProgramData extends InstructionAccountInput = InstructionAccountInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
   TAccountUnderlyingMint extends InstructionAccountInput =
     InstructionAccountInput,
@@ -376,6 +427,8 @@ export type InitConfigInput<
     InstructionAccountInput,
 > = {
   admin: TAccountAdmin;
+  program?: TAccountProgram;
+  programData: TAccountProgramData;
   config: TAccountConfig;
   underlyingMint: TAccountUnderlyingMint;
   wrappedMint: TAccountWrappedMint;
@@ -389,6 +442,8 @@ export type InitConfigInput<
 
 export function getInitConfigInstruction<
   TAccountAdmin extends InstructionSignerInput,
+  TAccountProgram extends InstructionAccountInput,
+  TAccountProgramData extends InstructionAccountInput,
   TAccountConfig extends InstructionAccountInput,
   TAccountUnderlyingMint extends InstructionAccountInput,
   TAccountWrappedMint extends InstructionAccountInput,
@@ -401,6 +456,8 @@ export function getInitConfigInstruction<
 >(
   input: InitConfigInput<
     TAccountAdmin,
+    TAccountProgram,
+    TAccountProgramData,
     TAccountConfig,
     TAccountUnderlyingMint,
     TAccountWrappedMint,
@@ -416,6 +473,14 @@ export function getInitConfigInstruction<
   ResolvedInstructionAccountMeta<
     TAccountAdmin,
     InstructionAccountInputAddress<TAccountAdmin>
+  >,
+  ResolvedInstructionAccountMeta<
+    TAccountProgram,
+    InstructionAccountInputAddress<TAccountProgram>
+  >,
+  ResolvedInstructionAccountMeta<
+    TAccountProgramData,
+    InstructionAccountInputAddress<TAccountProgramData>
   >,
   ResolvedInstructionAccountMeta<
     TAccountConfig,
@@ -459,6 +524,16 @@ export function getInitConfigInstruction<
   // Original accounts.
   const originalAccounts = {
     admin: { value: input.admin ?? null, isSigner: true, isWritable: true },
+    program: {
+      value: input.program ?? null,
+      isSigner: false,
+      isWritable: false,
+    },
+    programData: {
+      value: input.programData ?? null,
+      isSigner: false,
+      isWritable: false,
+    },
     config: { value: input.config ?? null, isSigner: false, isWritable: true },
     underlyingMint: {
       value: input.underlyingMint ?? null,
@@ -501,6 +576,10 @@ export function getInitConfigInstruction<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.program.value) {
+    accounts.program.value =
+      "9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q" as Address<"9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q">;
+  }
   if (!accounts.wrappedTokenProgram.value) {
     accounts.wrappedTokenProgram.value =
       "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address<"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb">;
@@ -513,6 +592,8 @@ export function getInitConfigInstruction<
   return Object.freeze({
     accounts: [
       getAccountMeta("admin", accounts.admin),
+      getAccountMeta("program", accounts.program),
+      getAccountMeta("programData", accounts.programData),
       getAccountMeta("config", accounts.config),
       getAccountMeta("underlyingMint", accounts.underlyingMint),
       getAccountMeta("wrappedMint", accounts.wrappedMint),
@@ -531,6 +612,14 @@ export function getInitConfigInstruction<
     ResolvedInstructionAccountMeta<
       TAccountAdmin,
       InstructionAccountInputAddress<TAccountAdmin>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountProgram,
+      InstructionAccountInputAddress<TAccountProgram>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountProgramData,
+      InstructionAccountInputAddress<TAccountProgramData>
     >,
     ResolvedInstructionAccountMeta<
       TAccountConfig,
@@ -574,14 +663,16 @@ export type ParsedInitConfigInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     admin: TAccountMetas[0];
-    config: TAccountMetas[1];
-    underlyingMint: TAccountMetas[2];
-    wrappedMint: TAccountMetas[3];
-    vault: TAccountMetas[4];
-    treasury: TAccountMetas[5];
-    underlyingTokenProgram: TAccountMetas[6];
-    wrappedTokenProgram: TAccountMetas[7];
-    systemProgram: TAccountMetas[8];
+    program: TAccountMetas[1];
+    programData: TAccountMetas[2];
+    config: TAccountMetas[3];
+    underlyingMint: TAccountMetas[4];
+    wrappedMint: TAccountMetas[5];
+    vault: TAccountMetas[6];
+    treasury: TAccountMetas[7];
+    underlyingTokenProgram: TAccountMetas[8];
+    wrappedTokenProgram: TAccountMetas[9];
+    systemProgram: TAccountMetas[10];
   };
   data: InitConfigInstructionData;
 };
@@ -594,12 +685,12 @@ export function parseInitConfigInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedInitConfigInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 9) {
+  if (instruction.accounts.length < 11) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 9,
+        expectedAccountMetas: 11,
       },
     );
   }
@@ -613,6 +704,8 @@ export function parseInitConfigInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       admin: getNextAccount(),
+      program: getNextAccount(),
+      programData: getNextAccount(),
       config: getNextAccount(),
       underlyingMint: getNextAccount(),
       wrappedMint: getNextAccount(),

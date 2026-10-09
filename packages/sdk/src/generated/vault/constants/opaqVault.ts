@@ -14,6 +14,10 @@ export const CONFIG_SEED: ReadonlyUint8Array = new Uint8Array([
 
 export const MAX_FEE_BPS: number = 100;
 
+export const PENDING_ADMIN_SEED: ReadonlyUint8Array = new Uint8Array([
+  112, 101, 110, 100, 105, 110, 103, 95, 97, 100, 109, 105, 110,
+]);
+
 export const VAULT_SEED: ReadonlyUint8Array = new Uint8Array([
   118, 97, 117, 108, 116,
 ]);

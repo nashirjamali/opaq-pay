@@ -7,3 +7,4 @@
  */
 
 export * from "./config.js";
+export * from "./pendingAdmin.js";

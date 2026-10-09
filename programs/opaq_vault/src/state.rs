@@ -20,6 +20,16 @@ pub struct Config {
     pub vault_bump: u8,
 }
 
+/// PDA: `["pending_admin", config]`. Exists only while an admin transfer is proposed.
+#[account]
+#[derive(InitSpace)]
+pub struct PendingAdmin {
+    pub new_admin: Pubkey,
+    /// Paid the rent; receives it back on accept or cancel.
+    pub proposed_by: Pubkey,
+    pub bump: u8,
+}
+
 impl Config {
     pub fn signer_seeds(&self) -> [&[u8]; 2] {
         [CONFIG_SEED, std::slice::from_ref(&self.bump)]

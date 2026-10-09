@@ -6,6 +6,9 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from "./adminChanged.js";
+export * from "./adminTransferCancelled.js";
+export * from "./adminTransferProposed.js";
 export * from "./configInitialized.js";
 export * from "./deposited.js";
 export * from "./feeUpdated.js";

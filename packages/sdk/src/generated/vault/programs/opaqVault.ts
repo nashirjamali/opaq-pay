@@ -35,34 +35,54 @@ import {
 } from "@solana/program-client-core";
 import {
   getConfigCodec,
+  getPendingAdminCodec,
   type Config,
   type ConfigArgs,
+  type PendingAdmin,
+  type PendingAdminArgs,
 } from "../accounts/index.js";
 import {
+  getAcceptAdminInstructionAsync,
+  getCancelAdminTransferInstructionAsync,
   getDepositInstructionAsync,
   getInitConfigInstructionAsync,
+  getProposeAdminInstructionAsync,
   getSetFeeInstructionAsync,
   getWithdrawInstructionAsync,
+  parseAcceptAdminInstruction,
+  parseCancelAdminTransferInstruction,
   parseDepositInstruction,
   parseInitConfigInstruction,
+  parseProposeAdminInstruction,
   parseSetFeeInstruction,
   parseWithdrawInstruction,
+  type AcceptAdminAsyncInput,
+  type CancelAdminTransferAsyncInput,
   type DepositAsyncInput,
   type InitConfigAsyncInput,
+  type ParsedAcceptAdminInstruction,
+  type ParsedCancelAdminTransferInstruction,
   type ParsedDepositInstruction,
   type ParsedInitConfigInstruction,
+  type ParsedProposeAdminInstruction,
   type ParsedSetFeeInstruction,
   type ParsedWithdrawInstruction,
+  type ProposeAdminAsyncInput,
   type SetFeeAsyncInput,
   type WithdrawAsyncInput,
 } from "../instructions/index.js";
-import { findConfigPda, findVaultPda } from "../pdas/index.js";
+import {
+  findConfigPda,
+  findPendingAdminPda,
+  findVaultPda,
+} from "../pdas/index.js";
 
 export const OPAQ_VAULT_PROGRAM_ADDRESS =
   "9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q" as Address<"9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q">;
 
 export enum OpaqVaultAccount {
   Config,
+  PendingAdmin,
 }
 
 export function identifyOpaqVaultAccount(
@@ -80,6 +100,17 @@ export function identifyOpaqVaultAccount(
   ) {
     return OpaqVaultAccount.Config;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([220, 45, 135, 16, 196, 153, 181, 56]),
+      ),
+      0,
+    )
+  ) {
+    return OpaqVaultAccount.PendingAdmin;
+  }
   throw new SolanaError(
     SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT,
     { accountData: data, programName: "opaqVault" },
@@ -87,6 +118,9 @@ export function identifyOpaqVaultAccount(
 }
 
 export enum OpaqVaultEvent {
+  AdminChanged,
+  AdminTransferCancelled,
+  AdminTransferProposed,
   ConfigInitialized,
   Deposited,
   FeeUpdated,
@@ -97,6 +131,39 @@ export function identifyOpaqVaultEvent(
   event: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): OpaqVaultEvent {
   const data = "data" in event ? event.data : event;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([232, 34, 31, 226, 62, 18, 19, 114]),
+      ),
+      0,
+    )
+  ) {
+    return OpaqVaultEvent.AdminChanged;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([93, 23, 69, 55, 216, 128, 106, 56]),
+      ),
+      0,
+    )
+  ) {
+    return OpaqVaultEvent.AdminTransferCancelled;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([203, 168, 175, 51, 239, 104, 20, 85]),
+      ),
+      0,
+    )
+  ) {
+    return OpaqVaultEvent.AdminTransferProposed;
+  }
   if (
     containsBytes(
       data,
@@ -147,8 +214,11 @@ export function identifyOpaqVaultEvent(
 }
 
 export enum OpaqVaultInstruction {
+  AcceptAdmin,
+  CancelAdminTransfer,
   Deposit,
   InitConfig,
+  ProposeAdmin,
   SetFee,
   Withdraw,
 }
@@ -157,6 +227,28 @@ export function identifyOpaqVaultInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): OpaqVaultInstruction {
   const data = "data" in instruction ? instruction.data : instruction;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([112, 42, 45, 90, 116, 181, 13, 170]),
+      ),
+      0,
+    )
+  ) {
+    return OpaqVaultInstruction.AcceptAdmin;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([38, 131, 157, 31, 240, 137, 44, 215]),
+      ),
+      0,
+    )
+  ) {
+    return OpaqVaultInstruction.CancelAdminTransfer;
+  }
   if (
     containsBytes(
       data,
@@ -178,6 +270,17 @@ export function identifyOpaqVaultInstruction(
     )
   ) {
     return OpaqVaultInstruction.InitConfig;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([121, 214, 199, 212, 87, 39, 117, 234]),
+      ),
+      0,
+    )
+  ) {
+    return OpaqVaultInstruction.ProposeAdmin;
   }
   if (
     containsBytes(
@@ -211,11 +314,20 @@ export type ParsedOpaqVaultInstruction<
   TProgram extends string = "9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q",
 > =
   | ({
+      instructionType: OpaqVaultInstruction.AcceptAdmin;
+    } & ParsedAcceptAdminInstruction<TProgram>)
+  | ({
+      instructionType: OpaqVaultInstruction.CancelAdminTransfer;
+    } & ParsedCancelAdminTransferInstruction<TProgram>)
+  | ({
       instructionType: OpaqVaultInstruction.Deposit;
     } & ParsedDepositInstruction<TProgram>)
   | ({
       instructionType: OpaqVaultInstruction.InitConfig;
     } & ParsedInitConfigInstruction<TProgram>)
+  | ({
+      instructionType: OpaqVaultInstruction.ProposeAdmin;
+    } & ParsedProposeAdminInstruction<TProgram>)
   | ({
       instructionType: OpaqVaultInstruction.SetFee;
     } & ParsedSetFeeInstruction<TProgram>)
@@ -228,6 +340,20 @@ export function parseOpaqVaultInstruction<TProgram extends string>(
 ): ParsedOpaqVaultInstruction<TProgram> {
   const instructionType = identifyOpaqVaultInstruction(instruction);
   switch (instructionType) {
+    case OpaqVaultInstruction.AcceptAdmin: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: OpaqVaultInstruction.AcceptAdmin,
+        ...parseAcceptAdminInstruction(instruction),
+      };
+    }
+    case OpaqVaultInstruction.CancelAdminTransfer: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: OpaqVaultInstruction.CancelAdminTransfer,
+        ...parseCancelAdminTransferInstruction(instruction),
+      };
+    }
     case OpaqVaultInstruction.Deposit: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -240,6 +366,13 @@ export function parseOpaqVaultInstruction<TProgram extends string>(
       return {
         instructionType: OpaqVaultInstruction.InitConfig,
         ...parseInitConfigInstruction(instruction),
+      };
+    }
+    case OpaqVaultInstruction.ProposeAdmin: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: OpaqVaultInstruction.ProposeAdmin,
+        ...parseProposeAdminInstruction(instruction),
       };
     }
     case OpaqVaultInstruction.SetFee: {
@@ -279,15 +412,29 @@ export type OpaqVaultPlugin = {
 export type OpaqVaultPluginAccounts = {
   config: ReturnType<typeof getConfigCodec> &
     SelfFetchFunctions<ConfigArgs, Config>;
+  pendingAdmin: ReturnType<typeof getPendingAdminCodec> &
+    SelfFetchFunctions<PendingAdminArgs, PendingAdmin>;
 };
 
 export type OpaqVaultPluginInstructions = {
+  acceptAdmin: (
+    input: AcceptAdminAsyncInput,
+  ) => ReturnType<typeof getAcceptAdminInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  cancelAdminTransfer: (
+    input: CancelAdminTransferAsyncInput,
+  ) => ReturnType<typeof getCancelAdminTransferInstructionAsync> &
+    SelfPlanAndSendFunctions;
   deposit: (
     input: DepositAsyncInput,
   ) => ReturnType<typeof getDepositInstructionAsync> & SelfPlanAndSendFunctions;
   initConfig: (
     input: InitConfigAsyncInput,
   ) => ReturnType<typeof getInitConfigInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  proposeAdmin: (
+    input: ProposeAdminAsyncInput,
+  ) => ReturnType<typeof getProposeAdminInstructionAsync> &
     SelfPlanAndSendFunctions;
   setFee: (
     input: SetFeeAsyncInput,
@@ -300,6 +447,7 @@ export type OpaqVaultPluginInstructions = {
 
 export type OpaqVaultPluginPdas = {
   config: typeof findConfigPda;
+  pendingAdmin: typeof findPendingAdminPda;
   vault: typeof findVaultPda;
 };
 
@@ -315,8 +463,21 @@ export function opaqVaultProgram() {
   ): ExtendedClient<T, { opaqVault: OpaqVaultPlugin }> => {
     return extendClient(client, {
       opaqVault: <OpaqVaultPlugin>{
-        accounts: { config: addSelfFetchFunctions(client, getConfigCodec()) },
+        accounts: {
+          config: addSelfFetchFunctions(client, getConfigCodec()),
+          pendingAdmin: addSelfFetchFunctions(client, getPendingAdminCodec()),
+        },
         instructions: {
+          acceptAdmin: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getAcceptAdminInstructionAsync(input),
+            ),
+          cancelAdminTransfer: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCancelAdminTransferInstructionAsync(input),
+            ),
           deposit: (input) =>
             addSelfPlanAndSendFunctions(
               client,
@@ -326,6 +487,11 @@ export function opaqVaultProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getInitConfigInstructionAsync(input),
+            ),
+          proposeAdmin: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getProposeAdminInstructionAsync(input),
             ),
           setFee: (input) =>
             addSelfPlanAndSendFunctions(
@@ -338,7 +504,11 @@ export function opaqVaultProgram() {
               getWithdrawInstructionAsync(input),
             ),
         },
-        pdas: { config: findConfigPda, vault: findVaultPda },
+        pdas: {
+          config: findConfigPda,
+          pendingAdmin: findPendingAdminPda,
+          vault: findVaultPda,
+        },
         identifyAccount: identifyOpaqVaultAccount,
         identifyInstruction: identifyOpaqVaultInstruction,
         parseInstruction: parseOpaqVaultInstruction,

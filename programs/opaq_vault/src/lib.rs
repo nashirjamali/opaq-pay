@@ -19,7 +19,8 @@ declare_id!("9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q");
 ///
 /// Invariant: vault balance == wrapper supply. The protocol fee is taken in the
 /// underlying token on deposit, capped on-chain at `MAX_FEE_BPS`. No instruction lets
-/// the admin move vault funds.
+/// the admin move vault funds. Only the upgrade authority can initialise; admin changes are
+/// two-step (propose, then accept by the new key).
 #[program]
 pub mod opaq_vault {
     use super::*;
@@ -38,5 +39,17 @@ pub mod opaq_vault {
 
     pub fn set_fee(ctx: Context<SetFee>, fee_bps: u16) -> Result<()> {
         instructions::set_fee::handle_set_fee(ctx, fee_bps)
+    }
+
+    pub fn propose_admin(ctx: Context<ProposeAdmin>, new_admin: Pubkey) -> Result<()> {
+        instructions::admin_transfer::handle_propose_admin(ctx, new_admin)
+    }
+
+    pub fn cancel_admin_transfer(ctx: Context<CancelAdminTransfer>) -> Result<()> {
+        instructions::admin_transfer::handle_cancel_admin_transfer(ctx)
+    }
+
+    pub fn accept_admin(ctx: Context<AcceptAdmin>) -> Result<()> {
+        instructions::admin_transfer::handle_accept_admin(ctx)
     }
 }
