@@ -12,10 +12,24 @@ For whoever holds the program upgrade authority. Applies to devnet now and mainn
 
 ## Devnet
 
-Current deployment (2026-10-09, `scripts/deploy-devnet.sh`): vault `9hoW…Jn1Q`, registry
-`DaqD…XABNk` (= the committed `declare_id!`s), upgrade authority and vault admin `BUutTY…iq1g2`,
-config `GMYM…RQaS`, wrapper mint `93Mg…7PxY` (CT locked), treasury `5d5y…YL2S` (admin's USDC
-account). The SDK's `DEVNET_PROGRAMS` points here.
+Current deployment (2026-10-09, `scripts/deploy-devnet.sh`). The SDK's `DEVNET_PROGRAMS` and
+`Anchor.toml` `[programs.devnet]` point here.
+
+| Account | Address |
+|---|---|
+| `opaq_vault` program | `9hoWkfxQ7igd7LJvmeVt1DjPrctY4wrVR7qgcqNZJn1Q` |
+| `opaq_registry` program | `DaqD6ZznS3TP1NbC2tPrUiBjMNwPbJR3GseHZsBXABNk` |
+| Upgrade authority (both) and vault admin | `BUutTYum7f8E2YtpfsUiyDgdbXRUZRWhpVg5mr4iq1g2` |
+| Vault config PDA `["config"]` | `GMYMnieArfKUTdTFpi481pTw2xDKW4ieoRSgYq9rRQaS` |
+| Vault token account PDA `["vault", config]` | `F3GP1m4bjciCL1zuHPgpxWQAgjKqYDvoKZSrvRFv4rjR` |
+| Wrapper mint (Token-2022, CT locked) | `93MgFRxY1KfY4DUmo7V4dxRZGy2i3nWTtGMGbVyP7PxY` |
+| Underlying mint (Circle devnet USDC) | `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` |
+| Treasury (admin's USDC account) | `5d5y5TKvzsA5MFWejsArZduKp8vNf1PHQkCd4iMYYL2S` |
+| Fee | 50 bps |
+| Smoke-test relayer (faucet-funded, unlinked) | `7RW3RSdyu7EYqyJzWj3j8egdgmP7MZL5gEnTrjdY2ztw` |
+
+Program IDs equal the committed `declare_id!`s; the program keypairs in `target/deploy` are
+gitignored and must be kept by the deployer.
 
 - Upgrade: `NO_DNA=1 anchor build`, then `solana program deploy target/deploy/<program>.so
   --program-id target/deploy/<program>-keypair.json --upgrade-authority <wallet> --url devnet`.
@@ -24,9 +38,16 @@ account). The SDK's `DEVNET_PROGRAMS` points here.
   both programs and runs `init_config` straight away.
 - Verify: `solana program show <id> --url devnet`, then `tests/scripts/smoke-devnet.ts`.
 
-The first devnet deployment (vault `JHC14…tPA`, registry `6xaX…cyE`, upgrade authority
-`BThV…N9VW`) runs the pre-hardening programs and is no longer the SDK default; reach it with
-`OPAQ_*_PROGRAM_ID` if needed.
+The first devnet deployment runs the pre-hardening programs and is no longer the SDK default;
+reach it with `OPAQ_*_PROGRAM_ID` if needed:
+
+| Account | Address |
+|---|---|
+| `opaq_vault` program | `JHC14FJWJWAkLNj4aDe1EPr65ideg4tSoZmrdXuZtPA` |
+| `opaq_registry` program | `6xaXX6KSFxkNohbanstr2Sqpk3teRUExuLQ1u1ndcEyE` |
+| Upgrade authority (both) | `BThVK3fZZf8rEoGUHrpzBq1DimVYy8ASj8ZXMQhCN9VW` |
+| Vault config PDA (admin `BUutTY…iq1g2`) | `EP628XDTgJmopN6ijdNaEAeqpxcR67MyTvYhrpFqEoyf` |
+| Wrapper mint (CT authority = admin, not locked) | `3u7BHHNES1wdwTSGGXQiVnTATTeRMXKeDTtePaE2duFX` |
 
 ## Mainnet (before any user funds)
 
