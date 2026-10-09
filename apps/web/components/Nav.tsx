@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
+import { GlyphEye, Icon } from "./Icon";
 import { IconActivity, IconCashOut, IconOverview, IconReceive, IconReports, IconSettings } from "./icons";
 
 const ITEMS: { href: string; label: string; Icon: ComponentType<{ size?: number }> }[] = [
@@ -25,7 +26,7 @@ export function Nav() {
         </Link>
       ))}
       <aside className="nav-note" aria-label="What is public">
-        <strong>What is public</strong>
+        <strong><Icon as={GlyphEye} size={16} /> What is public</strong>
         <p>Anyone can see who paid you and how much. They can&apos;t see which wallet is yours or what your balance is.</p>
       </aside>
     </nav>

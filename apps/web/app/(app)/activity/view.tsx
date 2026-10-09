@@ -43,11 +43,17 @@ export function ActivityView() {
         </div>
       ) : (
         <ul className="list">
-          {items.map((p) => (
-            <li key={p.id}>
-              <PaymentRow p={p} />
-            </li>
-          ))}
+          {items.map((p, i) => {
+            const group = p.daysAgo === 0 ? "Today" : p.daysAgo === 1 ? "Yesterday" : "Earlier this week";
+            const prev = items[i - 1];
+            const prevGroup = prev ? (prev.daysAgo === 0 ? "Today" : prev.daysAgo === 1 ? "Yesterday" : "Earlier this week") : null;
+            return (
+              <li key={p.id}>
+                {group !== prevGroup && <h2 className="group-head">{group}</h2>}
+                <PaymentRow p={p} />
+              </li>
+            );
+          })}
         </ul>
       )}
     </>

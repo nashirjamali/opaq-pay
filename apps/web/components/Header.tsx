@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "@/lib/session";
+import { GlyphUserPlus, Icon } from "./Icon";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -16,6 +17,7 @@ export function Header() {
       <ThemeToggle />
       {isDemo ? (
         <button type="button" className="btn btn-primary hide-sm" onClick={() => openAuth("create")}>
+          <Icon as={GlyphUserPlus} />
           Create account
         </button>
       ) : (

@@ -1,4 +1,6 @@
 import type { ComponentType } from "react";
+import type { IconType } from "react-icons";
+import { Icon as Glyph } from "./Icon";
 import { MarkArt } from "./MarkArt";
 
 export function ComingSoon({
@@ -9,7 +11,7 @@ export function ComingSoon({
 }: {
   Icon: ComponentType<{ size?: number }>;
   title: string;
-  points: string[];
+  points: { glyph: IconType; text: string }[];
   children: React.ReactNode;
 }) {
   return (
@@ -22,7 +24,10 @@ export function ComingSoon({
         <p className="muted">{children}</p>
         <ul className="soon-list">
           {points.map((p) => (
-            <li key={p}>{p}</li>
+            <li key={p.text}>
+              <Glyph as={p.glyph} size={18} />
+              <span>{p.text}</span>
+            </li>
           ))}
         </ul>
       </div>

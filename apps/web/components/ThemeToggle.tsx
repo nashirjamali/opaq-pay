@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { GlyphMoon, GlyphSun, Icon } from "./Icon";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -27,6 +28,7 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
     >
+      <Icon as={theme === "light" ? GlyphMoon : GlyphSun} />
       {theme === "light" ? "Dark mode" : "Light mode"}
     </button>
   );

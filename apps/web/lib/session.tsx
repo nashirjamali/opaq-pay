@@ -22,6 +22,8 @@ interface Session {
   setRevealed: (v: boolean) => void;
   authOpen: boolean;
   authAction: ActionKey | null;
+  /** Bumps on every open request so the dialog reopens even if `authOpen` never flipped back. */
+  authNonce: number;
   openAuth: (action?: ActionKey) => void;
   closeAuth: () => void;
   /** Runs `fn` for an account holder; in the demo it opens Create account instead. */
@@ -39,9 +41,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [revealed, setRevealed] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authAction, setAuthAction] = useState<ActionKey | null>(null);
+  const [authNonce, setAuthNonce] = useState(0);
 
   const openAuth = useCallback((action?: ActionKey) => {
     setAuthAction(action ?? "create");
+    setAuthNonce((n) => n + 1);
     setAuthOpen(true);
   }, []);
   const closeAuth = useCallback(() => setAuthOpen(false), []);
@@ -79,13 +83,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setRevealed,
       authOpen,
       authAction,
+      authNonce,
       openAuth,
       closeAuth,
       requireAccount,
       createAccount,
       signOut,
     }),
-    [isDemo, handle, revealed, authOpen, authAction, openAuth, closeAuth, requireAccount, createAccount, signOut],
+    [isDemo, handle, revealed, authOpen, authAction, authNonce, openAuth, closeAuth, requireAccount, createAccount, signOut],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { validateHandle } from "@/lib/handle";
+import { GlyphGoogle, GlyphKey, GlyphWallet, Icon } from "./Icon";
 import { ACTION_LABEL, useSession } from "@/lib/session";
 
 export function AuthDialog() {
-  const { authOpen, authAction, closeAuth, createAccount } = useSession();
+  const { authOpen, authAction, authNonce, closeAuth, createAccount } = useSession();
   const ref = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState<"choose" | "handle">("choose");
   const [error, setError] = useState("");
@@ -19,7 +20,7 @@ export function AuthDialog() {
       d.showModal();
     }
     if (!authOpen && d.open) d.close();
-  }, [authOpen]);
+  }, [authOpen, authNonce]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,13 +42,17 @@ export function AuthDialog() {
           <div className="stack" style={{ gap: 12 }}>
             {/* TODO: wire to the embedded wallet provider (open decision). */}
             <button type="button" className="btn btn-primary" onClick={() => setStep("handle")}>
+              <Icon as={GlyphGoogle} size={20} />
               Continue with Google
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setStep("handle")}>
+              <Icon as={GlyphWallet} size={20} />
               Use a Phantom or Solflare wallet
             </button>
           </div>
-          <p className="privacy">Your spend key stays with you. Opaq cannot move your funds.</p>
+          <p className="privacy">
+            <Icon as={GlyphKey} size={16} /> Your spend key stays with you. Opaq cannot move your funds.
+          </p>
           <button type="button" className="btn btn-quiet" onClick={closeAuth}>
             Not now
           </button>
