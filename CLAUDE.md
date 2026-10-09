@@ -80,6 +80,9 @@ JS workspaces:
 - `pnpm test:integration` – `anchor build`, then the Surfpool suite in `tests/`
 - `pnpm --filter @opaq/server test` – server suite (Surfpool + a temp Postgres via `initdb`/`pg_ctl`,
   or `DATABASE_URL`); needs `anchor build` first
+- `pnpm --filter @opaq/web dev` – Next.js app on :3000 (`build`, `typecheck` likewise). Product first: `/` redirects to
+  the signed-out demo; actions ask for an account (`apps/web/lib/session.tsx`). UI direction: `DESIGN.md`,
+  wireframe in `docs/design/wireframe/`.
 - `pnpm --filter @opaq/sdk build && pnpm --filter @opaq/server start` – run the server (env: `.env.example`)
 - `RELAYER_KEYPAIR_FILE=… docker compose -f apps/server/compose.yaml up -d --build` – Postgres + server
   in Docker against devnet (port 8787; the key file stays on the host, mounted read-only). Export
