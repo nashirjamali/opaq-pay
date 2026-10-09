@@ -81,6 +81,9 @@ JS workspaces:
 - `pnpm --filter @opaq/server test` – server suite (Surfpool + a temp Postgres via `initdb`/`pg_ctl`,
   or `DATABASE_URL`); needs `anchor build` first
 - `pnpm --filter @opaq/sdk build && pnpm --filter @opaq/server start` – run the server (env: `.env.example`)
+- `RELAYER_KEYPAIR_FILE=… docker compose -f apps/server/compose.yaml up -d --build` – Postgres + server
+  in Docker against devnet (port 8787; the key file stays on the host, mounted read-only). Export
+  `RELAYER_KEYPAIR_FILE` for every compose command (`logs`, `down`), it is required.
 
 ## Integration tests (`tests/`)
 
@@ -148,6 +151,9 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
   refunds) + simulation cost cap + daily budget + per-client rate limit. Any new client flow that
   goes through the relayer must pass this policy; extend it deliberately, with a negative test.
 - The relayer key holds SOL only and must be funded from a treasury unrelated to any user.
+- RPC calls retry on 429, and relaying is idempotent: the relayer signs first (deterministic
+  ed25519), and if that signature already landed it returns it instead of resending. Upstream
+  rate limits surface as 503, which the SDK client retries.
 
 ## Devnet
 
@@ -166,6 +172,8 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
   funded from the faucet, never the recipient wallet. Needs `OPAQ_SMOKE_DIR` (outside the repo;
   holds `<handle>-seed.json` and resumable state) and a little devnet USDC/SOL. Last passed 2026-10-09 on the
   current deployment (handle `opaq_test`, faucet-funded relayer `7RW3…2ztw`).
+  With `OPAQ_SERVER_URL=http://localhost:8787` it uses a running server instead of a local relayer
+  key (indexer scan + `POST /v1/relay`); passed that way too on 2026-10-09.
 - The public devnet RPC returns 429 on proof-heavy plans; the scripts back off and treat
   "already processed" after a retry as success.
 

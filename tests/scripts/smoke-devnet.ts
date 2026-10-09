@@ -12,6 +12,10 @@
  *
  *   OPAQ_SMOKE_DIR=/path/outside/repo npx tsx scripts/smoke-devnet.ts [handle]
  *
+ * With OPAQ_SERVER_URL (an `apps/server` instance) the production path is used instead of a
+ * local relayer key: scanning goes through the indexer feed and every post-payment
+ * transaction through `POST /v1/relay`.
+ *
  * Env: OPAQ_RPC_URL, OPAQ_KEYPAIR (see init-devnet.ts), OPAQ_SMOKE_AMOUNT (base units, default 200000).
  */
 import { getTransferSolInstruction } from '@solana-program/system';
@@ -42,6 +46,7 @@ import {
   type InstructionPlan,
   type KeyPairSigner,
   type Signature,
+  type TransactionSigner,
 } from '@solana/kit';
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -60,7 +65,12 @@ import {
   getRegisterHandleInstruction,
   getSweepToVaultInstructions,
   getWithdrawFromVaultInstruction,
+  createIndexerClient,
+  createRelayerClient,
+  getRelayerSigner,
   scanForPayments,
+  scanIndexerForPayments,
+  sendPlanViaRelayer,
   type DetectedPayment,
 } from '@opaq/sdk';
 import {
@@ -104,7 +114,12 @@ const keys = deriveMetaKeysFromMasterSeed(new Uint8Array(Buffer.from(JSON.parse(
 const wallet = await createKeyPairSignerFromBytes(
   new Uint8Array(JSON.parse(readFileSync(env.OPAQ_KEYPAIR ?? `${homedir()}/.config/solana/id.json`, 'utf8'))),
 );
-const relayer = await createKeyPairSignerFromPrivateKeyBytes(secret('relayerSeed'));
+const serverUrl = env.OPAQ_SERVER_URL;
+const relayerClient = serverUrl ? createRelayerClient({ url: serverUrl }) : undefined;
+const indexerClient = serverUrl ? createIndexerClient({ url: serverUrl }) : undefined;
+const localRelayer = relayerClient ? undefined : await createKeyPairSignerFromPrivateKeyBytes(secret('relayerSeed'));
+/** Fee payer for everything after the payment: the server's relayer, or a local key. */
+const relayer: TransactionSigner = relayerClient ? await getRelayerSigner(relayerClient) : localRelayer!;
 const cashOut = await createKeyPairSignerFromPrivateKeyBytes(secret('cashOutSeed'));
 
 // --- sending ---------------------------------------------------------------------------------
@@ -167,6 +182,26 @@ async function run(label: string, plan: InstructionPlan, feePayer: KeyPairSigner
 }
 const ixs = (instructions: Instruction[]) => sequentialInstructionPlan(instructions);
 
+/** Sends a post-payment plan through the relayer (server or local key) and records it. */
+async function post(label: string, plan: InstructionPlan): Promise<Signature[]> {
+  if (!relayerClient) return run(label, plan, localRelayer!);
+  const signatures = await withRetry(() => sendPlanViaRelayer({ rpc, relayer: relayerClient, plan }));
+  state.postPayment.push(...signatures);
+  save();
+  console.log(`  ${label}: ${signatures.length} tx via ${serverUrl}, last https://explorer.solana.com/tx/${signatures.at(-1)}?cluster=devnet`);
+  return signatures;
+}
+
+/** Finds payments: indexer feed in server mode (finalized, so it lags a little), RPC otherwise. */
+async function scan(scanSeed: Uint8Array, spendPubkey: Uint8Array) {
+  const vault = settings;
+  if (indexerClient) {
+    return (await scanIndexerForPayments(rpc, indexerClient, { scanSeed, spendPubkey, vault, includeSwept: true })).payments;
+  }
+  return (await withRetry(() => scanForPayments(rpc, { scanSeed, spendPubkey, vault, programs, includeSwept: true, maxSignatures: 300 })))
+    .payments;
+}
+
 async function transactionAccounts(signature: Signature): Promise<string[]> {
   for (let i = 0; i < 8; i++) {
     const tx = await withRetry(() =>
@@ -191,13 +226,15 @@ function check(condition: boolean, message: string) {
 
 // --- 0. setup --------------------------------------------------------------------------------
 const settings = await fetchVaultSettings(rpc, programs);
-console.log(`recipient wallet ${wallet.address}\nrelayer          ${relayer.address}\ncash-out address ${cashOut.address}`);
+console.log(
+  `recipient wallet ${wallet.address}\nrelayer          ${relayer.address}${serverUrl ? ` (server ${serverUrl})` : ''}\ncash-out address ${cashOut.address}`,
+);
 
 // The relayer must not be funded from the recipient's wallet: that one transfer would link the
 // wallet to every stealth account the relayer serves. Use the devnet faucet; only fall back to
 // the wallet when explicitly allowed, and then the linkability check below fails on purpose.
 const relayerLamports = (await rpc.getBalance(relayer.address, { commitment: 'confirmed' }).send()).value;
-if (relayerLamports < 30_000_000n) {
+if (localRelayer && relayerLamports < 30_000_000n) {
   console.log('\n0. fund the relayer');
   try {
     const signature = await rpc.requestAirdrop(relayer.address, lamports(1_000_000_000n)).send();
@@ -248,17 +285,9 @@ if (!state.paySignature) {
 
 // --- 3. scan ---------------------------------------------------------------------------------
 console.log('\n3. scan');
-const scanInput = {
-  scanSeed: keys.scanSeed,
-  spendPubkey: keys.spendPubkey,
-  vault: settings,
-  programs,
-  includeSwept: true,
-  maxSignatures: 300,
-};
 let payment: DetectedPayment | undefined;
-for (let attempt = 1; attempt <= 6 && !payment; attempt++) {
-  payment = (await withRetry(() => scanForPayments(rpc, scanInput))).payments.find((p) => p.signature === state.paySignature);
+for (let attempt = 1; attempt <= 20 && !payment; attempt++) {
+  payment = (await scan(keys.scanSeed, keys.spendPubkey)).find((p) => p.signature === state.paySignature);
   if (!payment) await new Promise((resolve) => setTimeout(resolve, 4000));
 }
 check(payment !== undefined, 'scanner found the payment from chain data only');
@@ -272,7 +301,7 @@ if (!payment!.wrappedAccountExists && payment!.amount === 0n) {
   // --- 4. sweep ------------------------------------------------------------------------------
   console.log('\n4. sweep into the stealth address’s own wrapper account (relayer pays)');
   if (payment!.amount > 0n) {
-    await run(
+    await post(
       'create wrapper account + deposit + close USDC account',
       ixs(
         await getSweepToVaultInstructions({
@@ -283,7 +312,6 @@ if (!payment!.wrappedAccountExists && payment!.amount === 0n) {
           accountPayer: relayer,
         }),
       ),
-      relayer,
     );
   }
   let balance = await fetchStealthWrappedBalance(rpc, { scanSeed: keys.scanSeed, stealthAddress: stealthSigner.address, vault: settings });
@@ -292,26 +320,24 @@ if (!payment!.wrappedAccountExists && payment!.amount === 0n) {
 
   // --- 5. shield -----------------------------------------------------------------------------
   console.log('\n5. shield');
-  if (!balance.confidential) await run('configure confidential account', await getConfigureStealthAccountInstructionPlan(ct), relayer);
+  if (!balance.confidential) await post('configure confidential account', await getConfigureStealthAccountInstructionPlan(ct));
   const shield = await getShieldInstructions(ct);
-  if (shield.length) await run('deposit + apply (one tx)', ixs(shield), relayer);
+  if (shield.length) await post('deposit + apply (one tx)', ixs(shield));
   balance = await fetchStealthWrappedBalance(rpc, { scanSeed: keys.scanSeed, stealthAddress: stealthSigner.address, vault: settings });
   check(balance.publicAmount === 0n && balance.available === expected, 'public amount on chain is 0, all of it is shielded');
 
   // --- 6. viewing key ------------------------------------------------------------------------
   console.log('\n6. auditor with only the viewing key');
   const viewing = decodeViewingKey(encodeViewingKey(keys));
-  const seen = (await withRetry(() => scanForPayments(rpc, { ...scanInput, scanSeed: viewing.scanSeed, spendPubkey: viewing.spendPubkey }))).payments.find(
-    (p) => p.signature === state.paySignature,
-  );
+  const seen = (await scan(viewing.scanSeed, viewing.spendPubkey)).find((p) => p.signature === state.paySignature);
   const audited = await fetchStealthWrappedBalance(rpc, { scanSeed: viewing.scanSeed, stealthAddress: seen!.stealthAddress, vault: settings });
   check(audited.available === expected, `auditor finds the payment and decrypts ${audited.available}`);
 
   // --- 7. unshield + cash out ----------------------------------------------------------------
   console.log('\n7. unshield and cash out to a fresh address');
-  await run('unshield', await getUnshieldInstructionPlan(ct), relayer);
+  await post('unshield', await getUnshieldInstructionPlan(ct));
   const [cashOutUsdc] = await findAssociatedTokenPda({ owner: cashOut.address, mint: settings.underlyingMint, tokenProgram: TOKEN_PROGRAM_ADDRESS });
-  await run(
+  await post(
     'vault withdraw',
     ixs([
       getCreateAssociatedTokenIdempotentInstruction({
@@ -323,12 +349,11 @@ if (!payment!.wrappedAccountExists && payment!.amount === 0n) {
       }),
       await getWithdrawFromVaultInstruction({ owner: stealthSigner, vault: settings, amount: expected, destination: cashOutUsdc }),
     ]),
-    relayer,
   );
 
   // --- 8. close ------------------------------------------------------------------------------
   console.log('\n8. close the stealth wrapper account (rent back to the relayer)');
-  await run('empty + close', await getCloseStealthAccountInstructionPlan({ ...ct, rentRecipient: relayer.address }), relayer);
+  await post('empty + close', await getCloseStealthAccountInstructionPlan({ ...ct, rentRecipient: relayer.address }));
   balance = await fetchStealthWrappedBalance(rpc, { scanSeed: keys.scanSeed, stealthAddress: stealthSigner.address, vault: settings });
   check(!balance.exists, 'stealth wrapper account closed');
 }
