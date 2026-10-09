@@ -42,7 +42,12 @@ export class RelayerRejectedError extends Error {
   }
 }
 
-export function createRelayerClient(options: { url: string; fetch?: typeof fetch }): RelayerClient {
+/**
+ * `retries`: how often to retry a relay the server answered with 429/503 (rate limits, upstream
+ * RPC trouble). Safe because the relayer is idempotent: a transaction that already landed is
+ * answered with its signature. Default 4, with exponential backoff from 1 s.
+ */
+export function createRelayerClient(options: { url: string; fetch?: typeof fetch; retries?: number }): RelayerClient {
   const base = options.url.replace(/\/+$/, '');
   const doFetch = options.fetch ?? globalThis.fetch;
   let address: Address | undefined;
@@ -57,15 +62,22 @@ export function createRelayerClient(options: { url: string; fetch?: typeof fetch
       return address;
     },
     async relay(wireTransaction) {
-      const response = await doFetch(`${base}/v1/relay`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ transaction: wireTransaction }),
-      });
-      const body = (await response.json().catch(() => ({}))) as { signature?: unknown; error?: unknown };
-      if (!response.ok) throw new RelayerRejectedError(response.status, String(body.error ?? 'unknown'));
-      if (typeof body.signature !== 'string') throw new Error('Malformed relayer response');
-      return body.signature as Signature;
+      const retries = options.retries ?? 4;
+      for (let attempt = 0; ; attempt++) {
+        const response = await doFetch(`${base}/v1/relay`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ transaction: wireTransaction }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { signature?: unknown; error?: unknown };
+        if (response.ok) {
+          if (typeof body.signature !== 'string') throw new Error('Malformed relayer response');
+          return body.signature as Signature;
+        }
+        const retryable = response.status === 429 || response.status === 503;
+        if (!retryable || attempt >= retries) throw new RelayerRejectedError(response.status, String(body.error ?? 'unknown'));
+        await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
+      }
     },
   };
 }

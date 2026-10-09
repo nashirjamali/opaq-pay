@@ -157,6 +157,26 @@ export type RelayerRpc = Rpc<
   SimulateTransactionApi & SendTransactionApi & GetSignatureStatusesApi & IsBlockhashValidApi & GetBalanceApi
 >;
 
+/** True for HTTP 429 from the RPC, anywhere in the error's `cause` chain. */
+export function isRateLimited(error: unknown): boolean {
+  for (let e = error as { message?: string; context?: { statusCode?: number }; cause?: unknown } | undefined; e; e = e.cause as typeof e) {
+    if (e.context?.statusCode === 429 || /\b429\b|Too Many Requests/.test(e.message ?? '')) return true;
+  }
+  return false;
+}
+
+/** Retries an RPC call on 429 with exponential backoff (public endpoints rate-limit per method). */
+export async function withRpcRetry<T>(fn: () => Promise<T>, attempts = 6): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!isRateLimited(error) || i + 1 >= attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** i));
+    }
+  }
+}
+
 export class RelayError extends Error {
   constructor(
     readonly status: 400 | 429 | 502 | 503,
@@ -208,19 +228,25 @@ export function createRelayer(options: {
     const deadline = Date.now() + (options.confirmTimeoutMs ?? 60_000);
     let lastSend = Date.now();
     while (Date.now() < deadline) {
-      const { value } = await options.rpc.getSignatureStatuses([signature]).send();
-      const status = value[0];
+      let status;
+      try {
+        ({ value: [status] } = await withRpcRetry(() => options.rpc.getSignatureStatuses([signature]).send()));
+      } catch (error) {
+        if (!isRateLimited(error)) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue; // still landing or not; keep waiting until the deadline
+      }
       if (status?.err) throw new RelayError(400, `transaction failed: ${JSON.stringify(status.err, (_, v) => (typeof v === 'bigint' ? String(v) : v))}`);
       if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return;
       if (!status) {
-        const { value: valid } = await options.rpc.isBlockhashValid(blockhash, { commitment: 'confirmed' }).send();
+        const { value: valid } = await withRpcRetry(() => options.rpc.isBlockhashValid(blockhash, { commitment: 'confirmed' }).send());
         if (!valid) throw new RelayError(400, 'blockhash expired before the transaction landed');
-        if (Date.now() - lastSend > 2000) {
-          await options.rpc.sendTransaction(wire, { encoding: 'base64', skipPreflight: true, maxRetries: 0n }).send();
+        if (Date.now() - lastSend > 3000) {
+          await withRpcRetry(() => options.rpc.sendTransaction(wire, { encoding: 'base64', skipPreflight: true, maxRetries: 0n }).send());
           lastSend = Date.now();
         }
       }
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
     throw new RelayError(503, 'timed out waiting for confirmation');
   }
@@ -241,20 +267,37 @@ export function createRelayer(options: {
     const checked = await checkRelayPolicy(transaction, policy);
     if (!checked.ok) throw new RelayError(400, checked.reason);
 
+    // Ed25519 signatures are deterministic, so signing first gives the signature this
+    // transaction will have. If it already landed (a client retry after a timeout or 503),
+    // answer with it instead of failing on "already processed". Nothing is sent before the
+    // checks below pass.
+    const signed = await partiallySignTransaction([options.signer.keyPair], transaction);
+    const wire = getBase64EncodedWireTransaction(signed);
+    const signature = getSignatureFromTransaction(signed);
+    const {
+      value: [existing],
+    } = await withRpcRetry(() => options.rpc.getSignatureStatuses([signature], { searchTransactionHistory: false }).send());
+    if (existing && !existing.err && existing.confirmationStatus !== 'processed') {
+      log('relay retried for a landed transaction', { signature });
+      return signature;
+    }
+
     // Simulate (relayer signature still missing, so no sig verification) and measure what
     // the relayer's account would lose. Fees are charged on top of the simulated state.
     const unsigned = getBase64EncodedWireTransaction(transaction);
     const [{ value: before }, simulation] = await Promise.all([
-      options.rpc.getBalance(policy.relayer, { commitment: 'confirmed' }).send(),
-      options.rpc
-        .simulateTransaction(unsigned, {
-          encoding: 'base64',
-          sigVerify: false,
-          replaceRecentBlockhash: false,
-          commitment: 'confirmed',
-          accounts: { addresses: [policy.relayer], encoding: 'base64' },
-        })
-        .send(),
+      withRpcRetry(() => options.rpc.getBalance(policy.relayer, { commitment: 'confirmed' }).send()),
+      withRpcRetry(() =>
+        options.rpc
+          .simulateTransaction(unsigned, {
+            encoding: 'base64',
+            sigVerify: false,
+            replaceRecentBlockhash: false,
+            commitment: 'confirmed',
+            accounts: { addresses: [policy.relayer], encoding: 'base64' },
+          })
+          .send(),
+      ),
     ]);
     if (simulation.value.err) {
       throw new RelayError(400, `simulation failed: ${JSON.stringify(simulation.value.err, (_, v) => (typeof v === 'bigint' ? String(v) : v))}`);
@@ -267,11 +310,8 @@ export function createRelayer(options: {
       throw new RelayError(503, 'relayer daily budget exhausted');
     }
 
-    const signed = await partiallySignTransaction([options.signer.keyPair], transaction);
-    const wire = getBase64EncodedWireTransaction(signed);
-    const signature = getSignatureFromTransaction(signed);
     try {
-      await options.rpc.sendTransaction(wire, { encoding: 'base64', skipPreflight: true, maxRetries: 0n }).send();
+      await withRpcRetry(() => options.rpc.sendTransaction(wire, { encoding: 'base64', skipPreflight: true, maxRetries: 0n }).send());
     } catch (error) {
       throw new RelayError(502, `send failed: ${String(error)}`);
     }

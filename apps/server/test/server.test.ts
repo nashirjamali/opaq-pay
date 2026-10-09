@@ -245,6 +245,25 @@ describe('relayer', () => {
     expect((error as RelayerRejectedError).reason).toMatch(reason);
   }
 
+  it('is idempotent: relaying the same transaction twice returns the same signature', async () => {
+    const owner = await generateKeyPairSigner();
+    const [ata] = await findAssociatedTokenPda({ owner: owner.address, mint: usdc, tokenProgram: TOKEN_PROGRAM_ADDRESS });
+    const transaction = await wire([
+      getCreateAssociatedTokenIdempotentInstruction({
+        payer: createNoopSigner(relayerKey.address),
+        ata,
+        owner: owner.address,
+        mint: usdc,
+        tokenProgram: TOKEN_PROGRAM_ADDRESS,
+      }),
+    ]);
+    const first = await relayerClient().relay(transaction);
+    const second = await relayerClient().relay(transaction);
+    expect(second).toBe(first);
+    const { rows } = await db.query('select count(*)::int as n from relay_log where signature = $1', [first]);
+    expect(rows[0].n).toBe(1); // sent and budgeted once
+  });
+
   it('refuses to send its own SOL anywhere', async () => {
     const thief = await generateKeyPairSigner();
     await expectRejected(

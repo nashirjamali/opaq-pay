@@ -14,7 +14,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import type { Db } from './db.js';
 import type { Indexer } from './indexer.js';
-import { RelayError, type Relayer } from './relayer.js';
+import { isRateLimited, RelayError, type Relayer } from './relayer.js';
 
 export type AppDeps = {
   db: Db;
@@ -81,6 +81,8 @@ export function createApp(deps: AppDeps) {
       return c.json({ signature: await deps.relayer.relay(body.transaction, client) });
     } catch (error) {
       if (error instanceof RelayError) return c.json({ error: error.message }, error.status);
+      // Relaying is idempotent, so telling the client to retry is safe.
+      if (isRateLimited(error)) return c.json({ error: 'upstream RPC is rate limiting, retry shortly' }, 503);
       throw error;
     }
   });
