@@ -1,13 +1,16 @@
 /**
  * One-time setup of the shared `opaq_vault` on devnet: creates the wrapper mint (Token-2022 +
  * Confidential Transfer, config PDA as mint authority) and the treasury account, then calls
- * `init_config`. Whoever runs it becomes the vault admin, and it cannot be run twice.
+ * `init_config`. Only the vault program's upgrade authority can run it (programs built from
+ * this repo; the deployment from before that change accepted any signer), and only once.
  *
  *   npx tsx scripts/init-devnet.ts            # prints the plan, sends nothing
  *   npx tsx scripts/init-devnet.ts --yes      # sends the transactions
  *
  * Env: OPAQ_RPC_URL (default devnet), OPAQ_KEYPAIR (default ~/.config/solana/id.json),
- *      OPAQ_USDC_MINT (default Circle devnet USDC), OPAQ_FEE_BPS (default 50).
+ *      OPAQ_USDC_MINT (default Circle devnet USDC), OPAQ_FEE_BPS (default 50),
+ *      OPAQ_TREASURY_OWNER (address owning the fee account; default the admin wallet. Prefer a
+ *      dedicated address: deposits whose source is the treasury account itself are rejected).
  * Program IDs come from the SDK's DEVNET_PROGRAMS unless OPAQ_*_PROGRAM_ID is set.
  */
 import { getCreateAccountInstruction } from '@solana-program/system';
@@ -43,7 +46,7 @@ import {
 } from '@solana/kit';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { configFromEnv, fetchVaultSettings, vault } from '@opaq/sdk';
+import { configFromEnv, fetchVaultSettings, getInitVaultInstruction, vault } from '@opaq/sdk';
 
 const DEVNET_GENESIS = 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG';
 const CIRCLE_DEVNET_USDC = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
@@ -76,18 +79,19 @@ if (existing.value) {
 
 const mint = await fetchMint(rpc, usdcMint);
 const decimals = mint.data.decimals;
-const [treasury] = await findAssociatedTokenPda({ owner: admin.address, mint: usdcMint, tokenProgram: TOKEN_PROGRAM_ADDRESS });
+const treasuryOwner = env.OPAQ_TREASURY_OWNER ? address(env.OPAQ_TREASURY_OWNER) : admin.address;
+const [treasury] = await findAssociatedTokenPda({ owner: treasuryOwner, mint: usdcMint, tokenProgram: TOKEN_PROGRAM_ADDRESS });
 const balance = (await rpc.getBalance(admin.address).send()).value;
 
 console.log('Plan');
 console.log('  vault program   ', programs.vault);
 console.log('  admin (you)     ', admin.address, `(${Number(balance) / 1e9} SOL)`);
 console.log('  underlying mint ', usdcMint, `(${decimals} decimals)`);
-console.log('  treasury ATA    ', treasury);
+console.log('  treasury ATA    ', treasury, `(owner ${treasuryOwner}${treasuryOwner === admin.address ? ', the admin wallet' : ''})`);
 console.log('  config PDA      ', config);
 console.log('  fee             ', `${feeBps} bps`);
 if (!confirmed) {
-  console.log('\nDry run. Re-run with --yes to send. This makes you the vault admin, permanently.');
+  console.log('\nDry run. Re-run with --yes to send. This makes you the vault admin (transferable via propose/accept).');
   process.exit(0);
 }
 if (balance < 50_000_000n) throw new Error('Need at least 0.05 devnet SOL (solana airdrop 1 --url devnet)');
@@ -107,8 +111,9 @@ async function send(instructions: Instruction[]) {
 }
 
 const wrappedMint = await generateKeyPairSigner();
+// Locked confidential settings (required by init_config): no authority, no auditor.
 const confidential = extension('ConfidentialTransferMint', {
-  authority: admin.address,
+  authority: null,
   autoApproveNewAccounts: true,
   auditorElgamalPubkey: null,
 });
@@ -122,7 +127,7 @@ console.log(
     getCreateAssociatedTokenIdempotentInstruction({
       payer: admin,
       ata: treasury,
-      owner: admin.address,
+      owner: treasuryOwner,
       mint: usdcMint,
       tokenProgram: TOKEN_PROGRAM_ADDRESS,
     }),
@@ -142,17 +147,15 @@ console.log('2/2 init_config');
 console.log(
   '   ',
   await send([
-    await vault.getInitConfigInstructionAsync(
-      {
-        admin,
-        underlyingMint: usdcMint,
-        wrappedMint: wrappedMint.address,
-        treasury,
-        underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
-        feeBps,
-      },
-      { programAddress: programs.vault },
-    ),
+    await getInitVaultInstruction({
+      admin,
+      underlyingMint: usdcMint,
+      wrappedMint: wrappedMint.address,
+      treasury,
+      underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
+      feeBps,
+      programs,
+    }),
   ]),
 );
 
