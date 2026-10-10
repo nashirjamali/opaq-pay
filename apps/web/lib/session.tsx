@@ -56,6 +56,8 @@ export interface MoveInfo {
 
 interface Session {
   isDemo: boolean;
+  /** The signed-in wallet's address, or null in the demo. */
+  address: string | null;
   handle: string;
   balance: number;
   payments: Payment[];
@@ -216,6 +218,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Session>(
     () => ({
       isDemo,
+      address: account?.address ?? null,
       handle: account?.handle ?? SAMPLE_HANDLE,
       balance: isDemo ? SAMPLE_BALANCE : balance,
       payments: isDemo ? SAMPLE_PAYMENTS : payments,

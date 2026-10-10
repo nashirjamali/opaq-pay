@@ -14,9 +14,18 @@ import {
   type Signature,
   type TransactionSigner,
 } from "@solana/kit";
+import type { Address } from "@solana/kit";
 import { config, RPC_URL } from "./env";
 
 export const rpc = createSolanaRpc(RPC_URL);
+
+/** Enough for the rent of a new account (a handle or a one-time token account) plus the network fee. */
+export const MIN_SOL_LAMPORTS = 3_000_000n;
+
+export async function getSolBalance(address: Address): Promise<bigint> {
+  const { value } = await rpc.getBalance(address, { commitment: "confirmed" }).send();
+  return value;
+}
 
 let vaultPromise: Promise<VaultSettings> | null = null;
 

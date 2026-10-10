@@ -7,7 +7,7 @@ import { Amount } from "./Amount";
 
 const DAYS = [6, 5, 4, 3, 2, 1, 0];
 
-/** Answers one question: how much came in each day this week. Bars are drawn in the mark's diagonal dashes. */
+/** Answers one question: how much came in each day this week. Today's bar is lime, the rest Primary. */
 export function WeekChart({ payments }: { payments: Payment[] }) {
   const { revealed } = useSession();
   const perDay = DAYS.map((d) =>
@@ -29,11 +29,15 @@ export function WeekChart({ payments }: { payments: Payment[] }) {
         {perDay.map((n, i) => (
           <div className="bar-col" key={DAYS[i]}>
             <div
-              className={n > 0 || !revealed ? "bar" : "bar bar-empty"}
-              style={{ height: revealed ? `${Math.max(n / max, n > 0 ? 0.08 : 0) * 80}%` : "45%" }}
+              className={`${n > 0 || !revealed ? "bar" : "bar bar-empty"}${DAYS[i] === 0 && n > 0 && revealed ? " bar-today" : ""}`}
+              style={{ height: revealed ? `${Math.max(n / max, n > 0 ? 0.08 : 0) * 92}%` : "45%", opacity: revealed ? 1 : 0.35 }}
             />
-            <span className="bar-label">{DAYS[i] === 0 ? "Today" : `${DAYS[i]}d`}</span>
           </div>
+        ))}
+      </div>
+      <div className="bar-labels" aria-hidden="true">
+        {perDay.map((_, i) => (
+          <span className="bar-label" key={DAYS[i]}>{DAYS[i] === 0 ? "Today" : `${DAYS[i]}d`}</span>
         ))}
       </div>
       {total === 0 && revealed && <p className="muted">Nothing came in this week.</p>}

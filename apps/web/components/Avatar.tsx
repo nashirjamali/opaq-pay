@@ -1,17 +1,10 @@
-import { IconCashOut } from "./icons";
+import { CbIcon } from "./CbIcon";
 
-/** Initial-based tile. Payers are anonymous addresses, so there is no photo to show. */
-export function Avatar({ label, out = false }: { label: string; out?: boolean }) {
-  if (out) {
-    return (
-      <span className="tile tile-out" aria-hidden="true">
-        <IconCashOut size={20} />
-      </span>
-    );
-  }
+/** Direction tile: a lime arrow-down for money received, a black arrow-up for money sent out. Payers are anonymous addresses, so there is no photo. */
+export function Avatar({ out = false }: { label?: string; out?: boolean }) {
   return (
-    <span className="tile" aria-hidden="true">
-      {label.replace(/[^A-Za-z0-9]/g, "").slice(0, 2)}
+    <span className={out ? "tile tile-out" : "tile tile-in"} aria-hidden="true">
+      <CbIcon name={out ? "arrow-up" : "arrow-down"} size={20} />
     </span>
   );
 }

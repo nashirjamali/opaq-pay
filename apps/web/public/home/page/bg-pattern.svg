@@ -1,0 +1,28 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="2861.34" height="1175.5" viewBox="0 0 2861.34 1175.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="BG Pattern">
+<foreignObject x="-100" y="308.695" width="3061.34" height="953.859"><div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(50px);clip-path:url(#bgblur_0_0_53_clip_path);height:100%;width:100%"></div></foreignObject><path id="Vector 44" data-figma-bg-blur-radius="100" d="M1383.45 1150.2L0.236129 409.195H2861.11L1477.89 1150.2C1448.39 1166 1412.95 1166 1383.45 1150.2Z" fill="url(#paint0_linear_0_53)" fill-opacity="0.3" stroke="white"/>
+<foreignObject x="-99.9999" y="104.348" width="3061.34" height="953.859"><div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(50px);clip-path:url(#bgblur_1_0_53_clip_path);height:100%;width:100%"></div></foreignObject><path id="Vector 45" data-figma-bg-blur-radius="100" d="M1383.45 945.855L0.236181 204.848H2861.11L1477.89 945.855C1448.39 961.657 1412.95 961.657 1383.45 945.855Z" fill="url(#paint1_linear_0_53)" fill-opacity="0.4" stroke="white"/>
+<foreignObject x="-100" y="-100" width="3061.34" height="953.859"><div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(50px);clip-path:url(#bgblur_2_0_53_clip_path);height:100%;width:100%"></div></foreignObject><path id="Vector 46" data-figma-bg-blur-radius="100" d="M1383.45 741.507L0.236111 0.5H2861.11L1477.89 741.507C1448.39 757.31 1412.95 757.31 1383.45 741.507Z" fill="url(#paint2_linear_0_53)" fill-opacity="0.6" stroke="url(#paint3_linear_0_53)"/>
+</g>
+<defs>
+<clipPath id="bgblur_0_0_53_clip_path" transform="translate(100 -308.695)"><path d="M1383.45 1150.2L0.236129 409.195H2861.11L1477.89 1150.2C1448.39 1166 1412.95 1166 1383.45 1150.2Z"/>
+</clipPath><clipPath id="bgblur_1_0_53_clip_path" transform="translate(99.9999 -104.348)"><path d="M1383.45 945.855L0.236181 204.848H2861.11L1477.89 945.855C1448.39 961.657 1412.95 961.657 1383.45 945.855Z"/>
+</clipPath><clipPath id="bgblur_2_0_53_clip_path" transform="translate(100 100)"><path d="M1383.45 741.507L0.236111 0.5H2861.11L1477.89 741.507C1448.39 757.31 1412.95 757.31 1383.45 741.507Z"/>
+</clipPath><linearGradient id="paint0_linear_0_53" x1="1430.67" y1="409.195" x2="1430.67" y2="1175.5" gradientUnits="userSpaceOnUse">
+<stop stop-color="white" stop-opacity="0.2"/>
+<stop offset="1" stop-color="white"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_53" x1="1430.67" y1="204.848" x2="1430.67" y2="971.152" gradientUnits="userSpaceOnUse">
+<stop stop-color="white" stop-opacity="0.2"/>
+<stop offset="1" stop-color="white"/>
+</linearGradient>
+<linearGradient id="paint2_linear_0_53" x1="1430.67" y1="0.5" x2="1430.67" y2="766.804" gradientUnits="userSpaceOnUse">
+<stop stop-color="white" stop-opacity="0.2"/>
+<stop offset="1" stop-color="white"/>
+</linearGradient>
+<linearGradient id="paint3_linear_0_53" x1="1430.67" y1="-359.663" x2="1430.67" y2="725.935" gradientUnits="userSpaceOnUse">
+<stop stop-color="white" stop-opacity="0"/>
+<stop offset="1" stop-color="white"/>
+</linearGradient>
+</defs>
+</svg>

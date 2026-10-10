@@ -24,12 +24,12 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="btn btn-secondary"
+      className="btn btn-secondary theme-btn"
       onClick={toggle}
       aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
     >
       <Icon as={theme === "light" ? GlyphMoon : GlyphSun} />
-      {theme === "light" ? "Dark mode" : "Light mode"}
+      <span className="theme-label">{theme === "light" ? "Dark mode" : "Light mode"}</span>
     </button>
   );
 }

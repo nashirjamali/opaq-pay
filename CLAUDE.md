@@ -54,7 +54,7 @@ file's Commands section at the same time.
 - Clients: Codama-generated client from the Anchor IDL; `@solana/kit` (not legacy `@solana/web3.js`).
 - Frontend: Next.js + `@solana/react`, embedded wallet with Google login, Phantom/Solflare support.
 - Backend: Node.js (v24) + TypeScript (Hono or Express), Postgres, RPC webhooks for indexing.
-- Cross-chain: Circle CCTP, Base as the first EVM source chain.
+- Cross-chain: Circle CCTP; the product is multi-chain, with the first EVM source chain still to be chosen (see Open decisions).
 - Testing: LiteSVM / Mollusk for program unit tests, Surfpool for local integration.
 - Package manager: pnpm workspaces.
 
@@ -81,7 +81,10 @@ JS workspaces:
 - `pnpm --filter @opaq/server test` – server suite (Surfpool + a temp Postgres via `initdb`/`pg_ctl`,
   or `DATABASE_URL`); needs `anchor build` first
 - `pnpm --filter @opaq/web dev` – Next.js app on :3000 (`build`, `typecheck` likewise; each builds the SDK first).
-  Product first: `/` redirects to the signed-out demo; actions ask for an account. Config: `apps/web/.env.example`.
+  Product first: `/` is the marketing home (`app/page.tsx`, `app/home.css`, `components/home/`) and links to the signed-out demo at `/overview`; actions ask for an account. Config: `apps/web/.env.example`.
+- `pnpm dev:stack [wallet…]` – one command for local development (`scripts/dev-stack.sh`): runs `dev-net` and the web app
+  on :3000, passes the `NEXT_PUBLIC_*` settings itself (your `.env.local` is untouched), optionally funds wallets, and
+  stops everything on Ctrl+C. Builds the programs on first run if `target/deploy` is empty.
 - `pnpm --filter @opaq/integration-tests dev-net` – local stack for the web app (run `anchor build` first): surfnet with
   both programs and the vault set up behind :8899 (CORS + faucet `POST /faucet {"address"}`), plus a temp Postgres and
   the real Opaq server (indexer + relayer, funded key) on :8788. In `apps/web/.env.local` set

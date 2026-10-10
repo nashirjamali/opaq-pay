@@ -1,4 +1,5 @@
 import { AuthDialog } from "@/components/AuthDialog";
+import { AuthOnLoad } from "@/components/AuthOnLoad";
 import { DemoBanner } from "@/components/DemoBanner";
 import { Header } from "@/components/Header";
 import { MoveDialog } from "@/components/MoveDialog";
@@ -9,14 +10,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <a className="skip" href="#main">Skip to content</a>
-      <Header />
-      <div className="body">
+      <div className="shell">
         <Nav />
-        <main id="main" tabIndex={-1}>
-          <DemoBanner />
-          {children}
-        </main>
+        <div className="col">
+          <Header />
+          <main id="main" tabIndex={-1}>
+            <DemoBanner />
+            {children}
+          </main>
+        </div>
       </div>
+      <AuthOnLoad />
       <AuthDialog />
       <MoveDialog />
     </SessionProvider>

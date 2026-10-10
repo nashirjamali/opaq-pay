@@ -5,14 +5,14 @@ import type { Address } from "@solana/kit";
 import type { Wallet, WalletAccount } from "@wallet-standard/base";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { GlyphCheck, GlyphInfo, GlyphWallet, Icon } from "@/components/Icon";
+import { CbCircle, CbIcon } from "@/components/CbIcon";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { getVault, rpc, sendInstructions } from "@/lib/opaq/chain";
+import { getSolBalance, getVault, MIN_SOL_LAMPORTS, rpc, sendInstructions } from "@/lib/opaq/chain";
 import { config, WALLET_CHAIN } from "@/lib/opaq/env";
 import { formatUsdc } from "@/lib/format";
 import { parseUnits } from "@/lib/units";
-import { explainError } from "@/lib/wallet/errors";
+import { explainError, lowSolMessage } from "@/lib/wallet/errors";
 import { connectWallet, createWalletSigner } from "@/lib/wallet/standard";
 import { useWallets } from "@/lib/wallet/useWallets";
 
@@ -95,6 +95,11 @@ export function PayView({ handle }: { handle: string }) {
     setError("");
     setBusy("paying");
     try {
+      const lamports = await getSolBalance(connected.account.address as Address);
+      if (lamports < MIN_SOL_LAMPORTS) {
+        setError(lowSolMessage(lamports, config.cluster, "Paying"));
+        return;
+      }
       const payer = createWalletSigner(connected.wallet, connected.account, WALLET_CHAIN);
       const { instructions } = await getPayToMetaAddressInstructions({
         payer,
@@ -148,7 +153,7 @@ export function PayView({ handle }: { handle: string }) {
 
           {lookup.state === "ready" && paid && (
             <>
-              <span className="tile tile-lg" aria-hidden="true"><Icon as={GlyphCheck} size={26} /></span>
+              <CbCircle name="deposited" size={56} />
               <h1 id="pay-title">Sent {paid.amount} USDC to @{handle}</h1>
               <p className="muted">
                 The payment is confirmed on chain. Your address and the amount are public; @{handle} is not linked to your wallet.
@@ -177,7 +182,7 @@ export function PayView({ handle }: { handle: string }) {
               </div>
               <div className="seg" role="group" aria-label="Pay from">
                 <button type="button" aria-pressed="true">Solana USDC</button>
-                <button type="button" aria-pressed="false" disabled>Base, soon</button>
+                <button type="button" aria-pressed="false" disabled>More chains, soon</button>
               </div>
 
               {!connected ? (
@@ -191,7 +196,7 @@ export function PayView({ handle }: { handle: string }) {
                   ))}
                   {wallets.length === 0 && (
                     <p className="notice" role="status">
-                      <Icon as={GlyphWallet} size={18} />
+                      <CbIcon name="no-wallet" size={18} />
                       <span>
                         You need a Solana wallet to pay. Install <a href="https://phantom.app/download" target="_blank" rel="noreferrer">Phantom</a> or{" "}
                         <a href="https://solflare.com/download" target="_blank" rel="noreferrer">Solflare</a>, then reload.
@@ -206,14 +211,13 @@ export function PayView({ handle }: { handle: string }) {
                     {usdc !== null && <> · <span className="num">{formatUsdc(Number(usdc) / 10 ** lookup.vault.decimals)}</span> USDC available</>}
                   </p>
                   <button type="submit" className="btn btn-primary" disabled={busy !== null}>
-                    <Icon as={GlyphWallet} />
                     {busy === "paying" ? "Confirm in your wallet" : "Pay with wallet"}
                   </button>
                 </>
               )}
               <p className="err" id="pay-err" role="alert">{error}</p>
               <p className="fine">
-                <Icon as={GlyphInfo} size={14} /> Your address and the amount you send are public. @{handle} is not linked to your wallet or balance.
+                <CbIcon name="info" size={14} /> Your address and the amount you send are public. @{handle} is not linked to your wallet or balance.
               </p>
             </form>
           )}

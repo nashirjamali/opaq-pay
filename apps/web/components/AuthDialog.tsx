@@ -1,16 +1,19 @@
 "use client";
 
 import type { MetaKeys } from "@opaq/sdk";
+import type { Address } from "@solana/kit";
 import type { Wallet, WalletAccount } from "@wallet-standard/base";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { validateHandle } from "@/lib/handle";
 import { checkHandle, deriveKeys, recallHandle, registerHandle, rememberHandle } from "@/lib/opaq/account";
-import { WALLET_CHAIN } from "@/lib/opaq/env";
+import { getSolBalance, MIN_SOL_LAMPORTS } from "@/lib/opaq/chain";
+import { config, WALLET_CHAIN } from "@/lib/opaq/env";
 import { ACTION_LABEL, useSession } from "@/lib/session";
-import { explainError } from "@/lib/wallet/errors";
+import { explainError, lowSolMessage } from "@/lib/wallet/errors";
 import { connectWallet, createWalletSigner } from "@/lib/wallet/standard";
 import { useWallets } from "@/lib/wallet/useWallets";
-import { GlyphGoogle, GlyphKey, GlyphWallet, Icon } from "./Icon";
+import { CbCircle, CbIcon } from "./CbIcon";
+import { GlyphGoogle, Icon } from "./Icon";
 
 type Step = "choose" | "connecting" | "signing" | "handle" | "checking" | "registering";
 
@@ -99,6 +102,13 @@ export function AuthDialog() {
         return;
       }
       if (check === "available") {
+        const lamports = await getSolBalance(p.walletAccount.address as Address);
+        if (!live()) return;
+        if (lamports < MIN_SOL_LAMPORTS) {
+          setError(lowSolMessage(lamports, config.cluster, "Registering a handle"));
+          setStep("handle");
+          return;
+        }
         setStep("registering");
         await registerHandle(createWalletSigner(p.wallet, p.walletAccount, WALLET_CHAIN), name, p.keys);
         if (!live()) return;
@@ -118,6 +128,7 @@ export function AuthDialog() {
     <dialog ref={ref} aria-labelledby="auth-title" onClose={closeAuth} onClick={(e) => e.target === ref.current && closeAuth()}>
       {step === "choose" && (
         <div className="dlg">
+          <CbCircle name="wallet" size={56} />
           <h2 id="auth-title">Create your Opaq account</h2>
           <p>{why} The demo stays open without one.</p>
           <div className="stack" style={{ gap: 12 }}>
@@ -136,7 +147,7 @@ export function AuthDialog() {
             ))}
             {wallets.length === 0 && (
               <p className="notice" role="status">
-                <Icon as={GlyphWallet} size={18} />
+                <CbIcon name="no-wallet" size={18} />
                 <span>
                   No Solana wallet found in this browser. Install{" "}
                   <a href="https://phantom.app/download" target="_blank" rel="noreferrer">Phantom</a> or{" "}
@@ -147,7 +158,7 @@ export function AuthDialog() {
           </div>
           {error && <p className="err" role="alert">{error}</p>}
           <p className="privacy">
-            <Icon as={GlyphKey} size={16} /> Your spend key stays with you. Opaq cannot move your funds.
+            <CbIcon name="lock" size={16} /> Your spend key stays with you. Opaq cannot move your funds.
           </p>
           <button type="button" className="btn btn-quiet" onClick={closeAuth}>
             Not now
@@ -178,6 +189,7 @@ export function AuthDialog() {
 
       {(step === "handle" || step === "checking") && (
         <form className="dlg" onSubmit={submitHandle} noValidate>
+          <CbCircle name="account" size={56} />
           <h2 id="auth-title">Choose your handle</h2>
           <p className="muted">It becomes the end of your payment link.</p>
           <div className="field" style={{ margin: 0 }}>
@@ -202,7 +214,7 @@ export function AuthDialog() {
             <span className="err" id="handle-err" role="alert">{error}</span>
           </div>
           <p className="notice">
-            <Icon as={GlyphKey} size={18} />
+            <CbIcon name="lock" size={18} />
             <span>
               Registering is public. The network records your handle together with the wallet that registered it. Payments
               sent to the handle are not linked back to either.

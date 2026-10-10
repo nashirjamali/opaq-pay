@@ -1,6 +1,6 @@
 "use client";
 
-import { GlyphKey, GlyphSignOut, GlyphUser, GlyphUserPlus, Icon } from "@/components/Icon";
+import { CbIcon } from "@/components/CbIcon";
 import { PageHead } from "@/components/PageHead";
 import { useSession } from "@/lib/session";
 
@@ -12,14 +12,14 @@ export function SettingsView() {
       <div className="stack" style={{ maxWidth: 640 }}>
         {isDemo ? (
           <section className="card stack" style={{ gap: 14 }}>
-            <h2 className="h-ic"><Icon as={GlyphUser} size={20} /> Account</h2>
+            <h2 className="h-ic"><span className="ic-chip"><CbIcon name="account" /></span> Account</h2>
             <p className="muted">This is a demo account. Create your own to get a handle and a payment link.</p>
-            <div><button type="button" className="btn btn-primary" onClick={() => openAuth("create")}><Icon as={GlyphUserPlus} />Create account</button></div>
+            <div><button type="button" className="btn btn-primary" onClick={() => openAuth("create")}>Create account</button></div>
           </section>
         ) : (
           <>
             <section className="card stack" style={{ gap: 14 }}>
-              <h2 className="h-ic"><Icon as={GlyphUser} size={20} /> Account</h2>
+              <h2 className="h-ic"><span className="ic-chip"><CbIcon name="account" /></span> Account</h2>
               <dl className="kv">
                 <dt>Handle</dt>
                 <dd>@{handle}</dd>
@@ -27,10 +27,10 @@ export function SettingsView() {
                 <dd className="mono" title={account?.address}>{account ? `${account.address.slice(0, 4)}…${account.address.slice(-4)}` : ""}</dd>
               </dl>
               <p className="muted">Your handle and the wallet that registered it are public on chain.</p>
-              <div><button type="button" className="btn btn-secondary" onClick={signOut}><Icon as={GlyphSignOut} />Sign out</button></div>
+              <div><button type="button" className="btn btn-secondary" onClick={signOut}>Sign out</button></div>
             </section>
             <section className="card stack" style={{ gap: 14 }}>
-              <h2 className="h-ic"><Icon as={GlyphKey} size={20} /> Keys</h2>
+              <h2 className="h-ic"><span className="ic-chip"><CbIcon name="lock" /></span> Keys</h2>
               <p className="muted">Your spend key stays with you. Opaq cannot move your funds.</p>
             </section>
           </>
