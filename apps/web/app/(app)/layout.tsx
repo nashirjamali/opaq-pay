@@ -1,6 +1,7 @@
 import { AuthDialog } from "@/components/AuthDialog";
 import { DemoBanner } from "@/components/DemoBanner";
 import { Header } from "@/components/Header";
+import { MoveDialog } from "@/components/MoveDialog";
 import { Nav } from "@/components/Nav";
 import { SessionProvider } from "@/lib/session";
 
@@ -17,6 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <AuthDialog />
+      <MoveDialog />
     </SessionProvider>
   );
 }

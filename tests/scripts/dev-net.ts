@@ -9,15 +9,24 @@
  *   POST /faucet    { "address": "...", "sol": 2, "usdc": 100 }  funds a wallet
  *   GET  /info      { rpcUrl, usdcMint, wrappedMint, programs }
  *
- * Point the web app at it with NEXT_PUBLIC_RPC_URL=http://localhost:8899. The program IDs are
- * the same as devnet's, so nothing else changes. State is in memory and gone on exit.
+ * It also starts a temporary Postgres and the real Opaq server (indexer + relayer) on :8788, with a
+ * funded relayer key, so sweeping and shielding work like they will in production.
+ *
+ * Point the web app at it with NEXT_PUBLIC_RPC_URL=http://localhost:8899 and
+ * NEXT_PUBLIC_OPAQ_SERVER_URL=http://localhost:8788. The program IDs are the same as devnet's,
+ * so nothing else changes. State is in memory and gone on exit.
  */
+import { spawn } from 'node:child_process';
+import { generateKeyPairSync } from 'node:crypto';
 import { createServer } from 'node:http';
-import { isAddress } from '@solana/kit';
+import { fileURLToPath } from 'node:url';
+import { getAddressDecoder, isAddress } from '@solana/kit';
 import { DEVNET_PROGRAMS, fetchVaultSettings, getInitVaultInstruction, vault } from '@opaq/sdk';
+import { startPostgres } from '../../apps/server/test/postgres.js';
 import { startTestNet } from '../helpers.js';
 
 const PORT = Number(process.env.DEV_NET_PORT ?? 8899);
+const SERVER_PORT = Number(process.env.DEV_SERVER_PORT ?? 8788);
 const FEE_BPS = 50;
 
 const net = await startTestNet();
@@ -92,10 +101,41 @@ server.listen(PORT, () => {
   console.log(`  fund a wallet  curl -X POST localhost:${PORT}/faucet -d '{"address":"<address>"}'`);
 });
 
+// The relayer: a fresh key holding SOL only, funded from the surfnet like a treasury would be.
+const relayerKey = generateKeyPairSync('ed25519');
+const seed = new Uint8Array(relayerKey.privateKey.export({ format: 'der', type: 'pkcs8' })).slice(-32);
+const pub = new Uint8Array(relayerKey.publicKey.export({ format: 'der', type: 'spki' })).slice(-32);
+const relayerAddress = getAddressDecoder().decode(pub);
+net.surfnet.fundSol(relayerAddress, 50 * 1e9);
+
+const postgres = await startPostgres();
+const serverDir = fileURLToPath(new URL('../../apps/server/', import.meta.url));
+const opaqServer = spawn('pnpm', ['exec', 'tsx', 'src/main.ts'], {
+  cwd: serverDir,
+  stdio: ['ignore', 'inherit', 'inherit'],
+  env: {
+    ...process.env,
+    DATABASE_URL: postgres.url,
+    RPC_URL: net.surfnet.rpcUrl,
+    WS_URL: net.surfnet.wsUrl,
+    PORT: String(SERVER_PORT),
+    OPAQ_CLUSTER: 'localnet',
+    INDEXER_COMMITMENT: 'confirmed',
+    INDEXER_POLL_MS: '1000',
+    RELAYER_SECRET_KEY: JSON.stringify([...seed, ...pub]),
+    RELAYER_REQUESTS_PER_MINUTE: process.env.RELAYER_REQUESTS_PER_MINUTE ?? '600',
+  },
+});
+console.log(`  opaq server    http://localhost:${SERVER_PORT}  (relayer ${relayerAddress})`);
+
 const stop = () => {
+  opaqServer.kill('SIGTERM');
   server.close();
   net.stop();
-  process.exit(0);
+  setTimeout(() => {
+    postgres.stop();
+    process.exit(0);
+  }, 500);
 };
 process.on('SIGINT', stop);
 process.on('SIGTERM', stop);

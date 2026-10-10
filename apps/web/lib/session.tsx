@@ -1,13 +1,15 @@
 "use client";
 
-import type { MetaKeys } from "@opaq/sdk";
+import type { DetectedPayment, MetaKeys } from "@opaq/sdk";
 import type { Wallet, WalletAccount } from "@wallet-standard/base";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { relayer } from "./opaq/env";
 import { loadPayments } from "./opaq/payments";
+import { movePaymentsToPrivate, type MoveProgress } from "./opaq/shield";
 import { explainError } from "./wallet/errors";
 import { SAMPLE_BALANCE, SAMPLE_HANDLE, SAMPLE_PAYMENTS, type Payment } from "./sample";
 
-export type ActionKey = "copy" | "cashout" | "report" | "csv" | "create";
+export type ActionKey = "copy" | "cashout" | "report" | "csv" | "create" | "move";
 
 export const ACTION_LABEL: Record<ActionKey, string> = {
   copy: "copy your payment link",
@@ -15,6 +17,7 @@ export const ACTION_LABEL: Record<ActionKey, string> = {
   report: "create view access",
   csv: "export your payments",
   create: "get your own payment link",
+  move: "move payments to your private balance",
 };
 
 /** Everything a signed-in person is: a wallet, a handle on chain, and keys held in memory only. */
@@ -28,6 +31,29 @@ export interface Account {
 
 export type DataState = "ready" | "loading" | "error";
 
+export type MoveState =
+  | { status: "idle" }
+  | { status: "running"; progress: MoveProgress | null }
+  | { status: "done"; count: number }
+  | { status: "error"; message: string };
+
+/** What is waiting to be made private, and the dialog that does it. */
+export interface MoveInfo {
+  /** How many payments are not private yet. */
+  count: number;
+  total: number;
+  /** Share of `total` the protocol fee applies to (USDC not yet in the vault). */
+  unswept: number;
+  feeBps: number;
+  /** False when no relayer is configured: nothing can be moved. */
+  available: boolean;
+  state: MoveState;
+  open: boolean;
+  openDialog: () => void;
+  closeDialog: () => void;
+  start: () => void;
+}
+
 interface Session {
   isDemo: boolean;
   handle: string;
@@ -37,6 +63,7 @@ interface Session {
   dataState: DataState;
   dataError: string;
   refresh: () => void;
+  move: MoveInfo;
   revealed: boolean;
   setRevealed: (v: boolean) => void;
   authOpen: boolean;
@@ -65,6 +92,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(0);
   const [dataState, setDataState] = useState<DataState>("ready");
   const [dataError, setDataError] = useState("");
+  const [movable, setMovable] = useState<DetectedPayment[]>([]);
+  const [movableTotal, setMovableTotal] = useState(0);
+  const [unsweptTotal, setUnsweptTotal] = useState(0);
+  const [feeBps, setFeeBps] = useState(0);
+  const [moveState, setMoveState] = useState<MoveState>({ status: "idle" });
+  const [moveOpen, setMoveOpen] = useState(false);
   const isDemo = account === null;
 
   const openAuth = useCallback((action?: ActionKey) => {
@@ -86,6 +119,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAccount(next);
     setPayments([]);
     setBalance(0);
+    setMovable([]);
+    setMoveState({ status: "idle" });
     setDataState("loading");
     setRevealed(false);
     setAuthOpen(false);
@@ -100,6 +135,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // Scan for payments on sign-in, then every POLL_MS while the tab is visible. A late answer for a
   // previous account (or a previous request) is dropped.
   const requestId = useRef(0);
+  const moveRef = useRef<MoveState["status"]>("idle");
+  moveRef.current = moveState.status;
   const refresh = useCallback(() => {
     if (!account) return;
     const id = ++requestId.current;
@@ -108,6 +145,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (id !== requestId.current) return;
         setPayments(result.payments);
         setBalance(result.balance);
+        setMovable(result.movable);
+        setMovableTotal(result.movableTotal);
+        setUnsweptTotal(result.unsweptTotal);
+        setFeeBps(result.feeBps);
         setDataError("");
         setDataState("ready");
       })
@@ -122,13 +163,50 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!account) return;
     refresh();
     const timer = setInterval(() => {
-      if (!document.hidden) refresh();
+      if (!document.hidden && moveRef.current !== "running") refresh();
     }, POLL_MS);
     return () => {
       clearInterval(timer);
       requestId.current++;
     };
   }, [account, refresh]);
+
+  const startMove = useCallback(() => {
+    if (!account || movable.length === 0 || moveRef.current === "running") return;
+    setMoveState({ status: "running", progress: null });
+    movePaymentsToPrivate({
+      keys: account.keys,
+      payments: movable,
+      onProgress: (progress) => setMoveState({ status: "running", progress }),
+    })
+      .then(() => {
+        setMoveState({ status: "done", count: movable.length });
+        refresh();
+      })
+      .catch((error: unknown) => {
+        setMoveState({ status: "error", message: explainError(error) });
+        refresh();
+      });
+  }, [account, movable, refresh]);
+
+  const move = useMemo<MoveInfo>(
+    () => ({
+      count: movable.length,
+      total: movableTotal,
+      unswept: unsweptTotal,
+      feeBps,
+      available: relayer !== null,
+      state: moveState,
+      open: moveOpen,
+      openDialog: () => {
+        if (moveRef.current !== "running") setMoveState({ status: "idle" });
+        setMoveOpen(true);
+      },
+      closeDialog: () => setMoveOpen(false),
+      start: startMove,
+    }),
+    [movable, movableTotal, unsweptTotal, feeBps, moveState, moveOpen, startMove],
+  );
 
   const retry = useCallback(() => {
     setDataState("loading");
@@ -144,6 +222,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       dataState: isDemo ? "ready" : dataState,
       dataError,
       refresh: retry,
+      move,
       revealed,
       setRevealed,
       authOpen,
@@ -156,7 +235,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       signOut,
       account,
     }),
-    [isDemo, account, balance, payments, dataState, dataError, retry, revealed, authOpen, authAction, authNonce, openAuth, closeAuth, requireAccount, signIn, signOut],
+    [isDemo, account, balance, payments, dataState, dataError, retry, move, revealed, authOpen, authAction, authNonce, openAuth, closeAuth, requireAccount, signIn, signOut],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

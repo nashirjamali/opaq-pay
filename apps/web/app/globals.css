@@ -271,3 +271,4 @@ dialog[open] { animation: pop 160ms ease; }
 dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 20px; }
 dl.kv dt { color: var(--muted); }
 dl.kv dd { text-align: right; word-break: break-all; }
+.small { font-size: 14px; }

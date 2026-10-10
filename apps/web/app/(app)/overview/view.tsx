@@ -15,7 +15,7 @@ import { useCopy } from "@/lib/useCopy";
 import { payLink, useOrigin } from "@/lib/useOrigin";
 
 export function OverviewView() {
-  const { balance, payments, handle, revealed, setRevealed, requireAccount, dataState } = useSession();
+  const { balance, payments, handle, revealed, setRevealed, requireAccount, dataState, move, isDemo } = useSession();
   const router = useRouter();
   const { copied, copy } = useCopy();
   const origin = useOrigin();
@@ -24,6 +24,8 @@ export function OverviewView() {
   const failed = dataState === "error";
   const waiting = payments.filter((p) => p.status === "waiting").reduce((a, p) => a + p.amount, 0);
   const recent = payments.slice(0, 4);
+  const pending = isDemo ? waiting > 0 : move.count > 0;
+  const canMove = pending && !loading && !failed && (isDemo || move.available);
 
   return (
     <>
@@ -56,7 +58,13 @@ export function OverviewView() {
                 : "No payments yet. Your first one will appear here when it lands."}
           </p>
           <div className="actions">
-            <button type="button" className="btn btn-light" onClick={() => requireAccount("cashout", () => router.push("/cashout"))}>
+            {canMove && (
+              <button type="button" className="btn btn-light" onClick={() => requireAccount("move", move.openDialog)}>
+                <Icon as={GlyphLock} />
+                Move to private balance
+              </button>
+            )}
+            <button type="button" className={canMove ? "btn btn-ghost" : "btn btn-light"} onClick={() => requireAccount("cashout", () => router.push("/cashout"))}>
               Cash out
               <Icon as={GlyphOut} />
             </button>
@@ -65,6 +73,9 @@ export function OverviewView() {
               {copied ? "Copied" : "Copy payment link"}
             </button>
           </div>
+          {pending && !isDemo && !move.available && !loading && !failed && (
+            <p className="hero-sub" style={{ marginTop: 12 }}>Moving payments to your private balance is not available right now.</p>
+          )}
         </section>
         <section className="card" aria-labelledby="lnk">
           <h2 id="lnk" className="h-ic"><Icon as={GlyphLink} size={20} /> Your payment link</h2>
