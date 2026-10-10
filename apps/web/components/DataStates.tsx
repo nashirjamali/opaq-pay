@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "@/lib/session";
-import { GlyphInfo, Icon } from "./Icon";
+import { CbIcon } from "./CbIcon";
 
 /** Shown when the last scan failed. Says what happened and what to do, and never touches funds. */
 export function ErrorBanner() {
@@ -10,12 +10,12 @@ export function ErrorBanner() {
   return (
     <div className="banner banner-error" role="alert">
       <p className="banner-text">
-        <Icon as={GlyphInfo} size={20} />
+        <CbIcon name="error" size={20} />
         <span>
           <strong>Couldn&apos;t load your payments.</strong> {dataError} Your funds are not affected.
         </span>
       </p>
-      <button type="button" className="btn btn-secondary" onClick={refresh}>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={refresh}>
         Try again
       </button>
     </div>

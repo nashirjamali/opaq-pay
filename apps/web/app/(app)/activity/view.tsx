@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ErrorBanner, LoadingRows } from "@/components/DataStates";
-import { MarkArt } from "@/components/MarkArt";
+import { CbCircle } from "@/components/CbIcon";
 import { PaymentRow } from "@/components/PaymentRow";
 import { PageHead } from "@/components/PageHead";
 import type { PaymentStatus } from "@/lib/sample";
@@ -34,13 +34,13 @@ export function ActivityView() {
       {dataState === "loading" ? (
         <LoadingRows count={4} />
       ) : dataState === "error" ? null : !payments.length ? (
-        <div className="list empty">
-          <MarkArt className="empty-art" />
+        <div className="empty">
+          <CbCircle name="wallet" size={64} />
           <h3>No payments yet</h3>
           <p>Send your payment link to whoever owes you. Their payment shows up here when it lands.</p>
         </div>
       ) : !items.length ? (
-        <div className="list empty">
+        <div className="empty">
           <h3>Nothing matches this filter</h3>
           <p>Try another filter to see the rest of your activity.</p>
           <button type="button" className="btn btn-secondary" onClick={() => setFilter("all")}>Show all</button>

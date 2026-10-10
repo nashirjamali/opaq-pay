@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "@/lib/session";
-import { GlyphInfo, GlyphUserPlus, Icon } from "./Icon";
+import { CbIcon } from "./CbIcon";
 
 export function DemoBanner() {
   const { isDemo, openAuth } = useSession();
@@ -9,12 +9,11 @@ export function DemoBanner() {
   return (
     <div className="banner">
       <p className="banner-text">
-        <Icon as={GlyphInfo} size={20} />
+        <CbIcon name="info" size={20} />
         <span><strong>This is a demo with sample data.</strong> Create an account to get your own link and see your own
         payments here.</span>
       </p>
-      <button type="button" className="btn btn-primary" onClick={() => openAuth("create")}>
-        <Icon as={GlyphUserPlus} />
+      <button type="button" className="btn btn-primary btn-sm" onClick={() => openAuth("create")}>
         Create account
       </button>
     </div>

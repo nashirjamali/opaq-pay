@@ -1,3 +1,15 @@
+/**
+ * Shown instead of a wallet's own "reverted during simulation" error, which is what a wallet with no
+ * SOL gets (the fee payer account does not exist yet), so the person knows what to fix.
+ */
+export function lowSolMessage(lamports: bigint, cluster: "devnet" | "localnet", what: string): string {
+  const sol = Number(lamports) / 1e9;
+  const have = sol === 0 ? "no SOL" : `only ${sol.toFixed(4)} SOL`;
+  const where = cluster === "devnet" ? "on devnet" : "on the local chain";
+  const fix = cluster === "devnet" ? " Get free devnet SOL at faucet.solana.com, make sure your wallet is set to Devnet, then try again." : " Fund it from the local faucet, then try again.";
+  return `This wallet has ${have} ${where}. ${what} needs about 0.003 SOL for rent and the network fee.${fix}`;
+}
+
 /** Turns wallet and RPC failures into one sentence a person can act on. */
 /** Kit wraps the interesting failure (a relayer rejection, a program error) in `cause`, so read the whole chain. */
 function messageChain(error: unknown): string {

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BalanceFigure } from "@/components/BalanceFigure";
-import { GlyphCheck, GlyphCopy, GlyphEye, GlyphEyeOff, GlyphLink, GlyphLock, GlyphOut, Icon } from "@/components/Icon";
+import { CbCircle, CbIcon } from "@/components/CbIcon";
 import { ErrorBanner, LoadingRows } from "@/components/DataStates";
-import { MarkArt } from "@/components/MarkArt";
+import { HeroPattern } from "@/components/HeroPattern";
 import { PageHead } from "@/components/PageHead";
 import { PaymentRow } from "@/components/PaymentRow";
 import { WeekChart } from "@/components/WeekChart";
@@ -32,19 +32,19 @@ export function OverviewView() {
       <PageHead title="Overview">Your private balance and what came in recently.</PageHead>
       <ErrorBanner />
       <div className="ov">
-        {/* Single-hue gradient on the hero only: it lifts the balance, the one thing this screen is for. */}
+        {/* The one dark surface on the screen: it lifts the balance, the one thing this screen is for. */}
         <section className="hero" aria-labelledby="bal">
-          <MarkArt className="hero-art" />
+          <HeroPattern />
           <div className="label">
-            <span id="bal"><Icon as={GlyphLock} size={16} /> Private balance</span>
+            <span id="bal"><CbIcon name="lock" size={16} /> Private balance</span>
             <button type="button" className="hero-quiet" aria-pressed={revealed} onClick={() => setRevealed(!revealed)}>
-              <Icon as={revealed ? GlyphEyeOff : GlyphEye} />
+              <CbIcon name={revealed ? "eye-off" : "eye"} size={16} />
               {revealed ? "Hide amounts" : "Show amounts"}
             </button>
           </div>
           <div className="amount num" aria-busy={loading}>
             {loading ? <span className="ph hero-ph" role="img" aria-label="Loading balance" /> : failed ? <span className="muted-hero">Unavailable</span> : <BalanceFigure value={balance} />}
-            <small>USDC</small>
+            <small className="token"><span className="coin" aria-hidden="true">$</span>USDC</small>
           </div>
           <p className="hero-sub">
             {loading
@@ -59,17 +59,16 @@ export function OverviewView() {
           </p>
           <div className="actions">
             {canMove && (
-              <button type="button" className="btn btn-light" onClick={() => requireAccount("move", move.openDialog)}>
-                <Icon as={GlyphLock} />
+              <button type="button" className="btn btn-lime" onClick={() => requireAccount("move", move.openDialog)}>
+                <CbIcon name="lock" size={16} />
                 Move to private balance
               </button>
             )}
             <button type="button" className={canMove ? "btn btn-ghost" : "btn btn-light"} onClick={() => requireAccount("cashout", () => router.push("/cashout"))}>
+              <CbIcon name="arrow-up" size={16} />
               Cash out
-              <Icon as={GlyphOut} />
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => requireAccount("copy", () => copy(link.href))}>
-              <Icon as={copied ? GlyphCheck : GlyphCopy} />
               {copied ? "Copied" : "Copy payment link"}
             </button>
           </div>
@@ -78,12 +77,25 @@ export function OverviewView() {
           )}
         </section>
         <section className="card" aria-labelledby="lnk">
-          <h2 id="lnk" className="h-ic"><Icon as={GlyphLink} size={20} /> Your payment link</h2>
+          <h2 id="lnk" className="h-ic"><span className="ic-chip"><CbIcon name="price" /></span> Your payment link</h2>
           <div className="linkbox mono">{link.label}</div>
           <p className="muted">Anyone with this link can pay you. They see your handle, never your wallet or balance.</p>
           <p style={{ marginTop: 12 }}><Link href="/receive">Ask for a specific amount</Link></p>
         </section>
       </div>
+
+      {!loading && !failed && (
+        <div className="stat-strip">
+          <div>
+            <span className="stat-label"><CbIcon name="lock" size={16} /> Private payments</span>
+            <span className="stat-value num">{payments.filter((p) => p.status === "private").length}</span>
+          </div>
+          <div>
+            <span className="stat-label"><CbIcon name="switch-horizontal" size={16} /> Waiting to move</span>
+            <span className="stat-value num">{payments.filter((p) => p.status === "waiting").length}</span>
+          </div>
+        </div>
+      )}
 
       <div className="ov2">
         <div>
@@ -102,12 +114,11 @@ export function OverviewView() {
               ))}
             </ul>
           ) : (
-            <div className="list empty">
-              <MarkArt className="empty-art" />
+            <div className="empty">
+              <CbCircle name="wallet" size={64} />
               <h3>No payments yet</h3>
               <p>Send your payment link to whoever owes you. Their payment shows up here when it lands.</p>
               <button type="button" className="btn btn-primary" onClick={() => requireAccount("copy", () => copy(link.href))}>
-                <Icon as={copied ? GlyphCheck : GlyphCopy} />
                 {copied ? "Copied" : "Copy payment link"}
               </button>
             </div>

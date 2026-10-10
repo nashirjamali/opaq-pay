@@ -11,7 +11,7 @@ export function PaymentRow({ p }: { p: Payment }) {
     <div className="row">
       <Avatar label={p.counterparty ?? "In"} out={out} />
       <span className="who">
-        {out ? "Cash out" : p.counterparty ? `From ${p.counterparty}` : "Payment received"}
+        {out ? "Cash out" : p.counterparty ? <>From <span className="mono addr-inline">{p.counterparty}</span></> : "Payment received"}
         <small>{out ? `${p.when} to ${p.counterparty}` : p.when}</small>
       </span>
       <span className="c-status"><StatusChip status={p.status} /></span>

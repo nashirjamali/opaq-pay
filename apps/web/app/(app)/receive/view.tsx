@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GlyphCheck, GlyphCopy, GlyphLink, GlyphRequest, GlyphWallet, Icon } from "@/components/Icon";
+import { CbIcon } from "@/components/CbIcon";
 import { Logo } from "@/components/Logo";
 import { PageHead } from "@/components/PageHead";
 import { QrCode } from "@/components/QrCode";
@@ -30,12 +30,11 @@ export function ReceiveView() {
       <div className="two">
         <div className="stack">
           <section className="card" aria-labelledby="your-link">
-            <h2 id="your-link" className="h-ic"><Icon as={GlyphLink} size={20} /> Your link</h2>
+            <h2 id="your-link" className="h-ic"><span className="ic-chip"><CbIcon name="price" /></span> Your link</h2>
             <div className="link-qr">
               <div>
                 <div className="linkbox mono">{shown}</div>
                 <button type="button" className="btn btn-primary" onClick={() => requireAccount("copy", () => copy(url))}>
-                  <Icon as={copied ? GlyphCheck : GlyphCopy} />
                   {copied ? "Copied" : "Copy link"}
                 </button>
               </div>
@@ -43,7 +42,7 @@ export function ReceiveView() {
             </div>
           </section>
           <section className="card" aria-labelledby="ask">
-            <h2 id="ask" className="h-ic" style={{ marginBottom: 14 }}><Icon as={GlyphRequest} size={20} /> Ask for a specific amount</h2>
+            <h2 id="ask" className="h-ic" style={{ marginBottom: 14 }}><span className="ic-chip"><CbIcon name="coins" /></span> Ask for a specific amount</h2>
             <div className="field">
               <label htmlFor="amount">Amount (USDC)</label>
               <input id="amount" className="input num" inputMode="decimal" placeholder="Leave empty to let the payer choose" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -65,9 +64,9 @@ export function ReceiveView() {
             {note.trim() && <p className="payer-note">{note.trim()}</p>}
             <div className="seg" role="group" aria-label="Pay from">
               <button type="button" aria-pressed="true" tabIndex={-1}>Solana USDC</button>
-              <button type="button" aria-pressed="false" disabled tabIndex={-1}>Base, soon</button>
+              <button type="button" aria-pressed="false" disabled tabIndex={-1}>More chains, soon</button>
             </div>
-            <button type="button" className="btn btn-primary" tabIndex={-1}><Icon as={GlyphWallet} />Pay with wallet</button>
+            <button type="button" className="btn btn-primary" tabIndex={-1}>Pay with wallet</button>
             <p className="fine">Your address and the amount you send are public. @{handle} is not linked to your wallet or balance.</p>
           </div>
         </section>

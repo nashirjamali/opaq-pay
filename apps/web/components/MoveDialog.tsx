@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { formatUsdc, formatUsdcExact } from "@/lib/format";
 import { MOVE_PHASE_LABEL } from "@/lib/opaq/shield";
 import { useSession } from "@/lib/session";
-import { GlyphCheck, GlyphInfo, GlyphLock, Icon } from "./Icon";
+import { CbCircle, CbIcon } from "./CbIcon";
 
 /** Confirms, runs and reports moving payments into the private balance. */
 export function MoveDialog() {
@@ -36,6 +36,7 @@ export function MoveDialog() {
     >
       {state.status === "idle" && (
         <div className="dlg">
+          <CbCircle name="privacy" size={56} />
           <h2 id="move-title">Move {formatUsdc(move.total)} USDC to your private balance</h2>
           <dl className="kv">
             <dt>Protocol fee ({feePct})</dt>
@@ -44,7 +45,7 @@ export function MoveDialog() {
             <dd className="num">{formatUsdcExact(net)} USDC</dd>
           </dl>
           <p className="notice">
-            <Icon as={GlyphLock} size={18} />
+            <CbIcon name="lock" size={18} />
             <span>
               Afterwards the amount is hidden on chain. The deposit into the vault stays public, and the payment is still
               not linked to your wallet.
@@ -77,7 +78,7 @@ export function MoveDialog() {
 
       {state.status === "done" && (
         <div className="dlg">
-          <span className="tile tile-lg" aria-hidden="true"><Icon as={GlyphCheck} size={26} /></span>
+          <CbCircle name="privacy" size={56} />
           <h2 id="move-title">Your balance is private</h2>
           <p className="muted">
             {state.count === 1 ? "1 payment is" : `${state.count} payments are`} now in your private balance. Show amounts to
@@ -91,7 +92,7 @@ export function MoveDialog() {
         <div className="dlg">
           <h2 id="move-title">Couldn&apos;t finish moving your payments</h2>
           <p className="notice" role="alert">
-            <Icon as={GlyphInfo} size={18} />
+            <CbIcon name="info" size={18} />
             <span>{state.message} Nothing was lost: you can try again and it picks up where it stopped.</span>
           </p>
           <div className="row-btns">
