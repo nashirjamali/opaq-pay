@@ -80,6 +80,14 @@ JS workspaces:
 - `pnpm test:integration` – `anchor build`, then the Surfpool suite in `tests/`
 - `pnpm --filter @opaq/server test` – server suite (Surfpool + a temp Postgres via `initdb`/`pg_ctl`,
   or `DATABASE_URL`); needs `anchor build` first
+- `pnpm --filter @opaq/web dev` – Next.js app on :3000 (`build`, `typecheck` likewise; each builds the SDK first).
+  Product first: `/` redirects to the signed-out demo; actions ask for an account. Config: `apps/web/.env.example`.
+- `pnpm --filter @opaq/integration-tests dev-net` – local stack for the web app (run `anchor build` first): surfnet with
+  both programs and the vault set up behind :8899 (CORS + faucet `POST /faucet {"address"}`), plus a temp Postgres and
+  the real Opaq server (indexer + relayer, funded key) on :8788. In `apps/web/.env.local` set
+  `NEXT_PUBLIC_OPAQ_CLUSTER=localnet`, `NEXT_PUBLIC_RPC_URL=http://localhost:8899`,
+  `NEXT_PUBLIC_OPAQ_SERVER_URL=http://localhost:8788`. `RELAYER_REQUESTS_PER_MINUTE=2` makes a move fail halfway,
+  to test resuming.
 - `pnpm --filter @opaq/sdk build && pnpm --filter @opaq/server start` – run the server (env: `.env.example`)
 - `RELAYER_KEYPAIR_FILE=… docker compose -f apps/server/compose.yaml up -d --build` – Postgres + server
   in Docker against devnet (port 8787; the key file stays on the host, mounted read-only). Export
@@ -139,6 +147,26 @@ JS workspaces:
 - `src/disclosure.ts` (in `@opaq/sdk/confidential`) – `createDisclosure` (per-payment keys for a
   time range instead of the scan seed), `verifyDisclosure` (checks entries against chain data).
 - `src/generated/{registry,vault}` – Codama clients, exported as `registry` and `vault`.
+
+## Web app (`apps/web`)
+
+Next.js (App Router) on `@opaq/sdk`. UI direction: `DESIGN.md`, wireframe in `docs/design/wireframe/`.
+
+- Accounts are Wallet Standard wallets (Phantom, Solflare, any Solana wallet). `lib/opaq/account.ts`: the wallet signs
+  `KEY_DERIVATION_MESSAGE`, the SDK derives the meta keys from the signature, and the keys live in memory only. Signing
+  in again gives the same keys; a remembered handle is trusted only after `fetchMetaAddress` matches those keys.
+- Registering a handle is signed and paid by the user's wallet (the relayer allowlist does not cover it) and records that
+  wallet as the handle's public owner. The UI says so. Google sign-in is shown as coming soon until the embedded wallet
+  provider is chosen.
+- `lib/opaq/payments.ts`: `scanForPayments` over RPC, or `scanIndexerForPayments` when `NEXT_PUBLIC_OPAQ_SERVER_URL` is
+  set. Matching is local with the scan key. Shielded amounts are decrypted in the browser with
+  `fetchStealthWrappedBalance` (the confidential entry, zk-sdk WASM, loaded on demand via `lib/opaq/confidential.ts`).
+- `lib/opaq/shield.ts` moves payments to the private balance: sweep, configure the stealth wrapper account, shield. It
+  needs the relayer (`NEXT_PUBLIC_OPAQ_SERVER_URL`), signs only with derived stealth keys (no wallet prompt), reads
+  chain state first so a retry resumes, and polls after each step because reads default to finalized commitment.
+  The protocol fee (`vault.feeBps`) is shown before confirming and only applies to USDC not yet in the vault.
+- `/pay/[handle]` is the payer page: looks up the handle, connects a wallet, pays with `getPayToMetaAddressInstructions`.
+- Not built yet: cash out (unshield + withdraw), reports and view keys.
 
 ## Server (`apps/server`)
 

@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opaq Pay Wireframe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Tokens. Brand blue and ink come from the supplied logo files; the blue is the logo's own
+   rendered shade (#3772FF under a 25% black overlay) so text on it passes AA. */
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --surface2:#EEF0F4; --ink:#141416; --muted:#555A66;
+  --line:#DDE0E6; --field:#8A8F9B; --brand:#2A55C8; --on-brand:#FFFFFF; --brand-soft:#E6ECFB;
+  --danger:#B3261E; --danger-soft:#FBEAE8; --scrim:rgba(20,20,22,.5);
+  --r-ctl:8px; --r-card:14px;
+  --font:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#0E0E10; --surface:#1A1B1F; --surface2:#232429; --ink:#FCFCFD; --muted:#A6AAB4;
+  --line:#2D2F36; --field:#6B7080; --brand:#6C97FF; --on-brand:#0B0C0E; --brand-soft:#1E2A47;
+  --danger:#FF8A80; --danger-soft:#3A1F1E; --scrim:rgba(0,0,0,.65);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--font);min-height:100vh}
+h1,h2,h3,p,ul,dl,dd{margin:0}
+ul{padding:0;list-style:none}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--brand)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--surface);padding:8px 12px;border-radius:var(--r-ctl);z-index:50}
+.skip:focus{left:8px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:.875em}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Wireframe review strip, not part of the product UI */
+.wf{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 16px;background:var(--surface2);border-bottom:1px dashed var(--field);font-size:13px;color:var(--muted)}
+.wf label{display:flex;align-items:center;gap:8px}
+.wf select{height:36px;padding:0 10px;border:1px solid var(--field);border-radius:var(--r-ctl);background:var(--surface)}
+
+/* Header */
+.top{display:flex;align-items:center;gap:12px;height:64px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .logo{height:34px;width:auto}
+.top .grow{flex:1}
+.logo-dark{display:none}
+:root[data-theme="dark"] .logo-light{display:none}
+:root[data-theme="dark"] .logo-dark{display:inline}
+
+/* Buttons and fields */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--r-ctl);border:1px solid transparent;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;background:none}
+.btn-primary{background:var(--brand);color:var(--on-brand)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-secondary{border-color:var(--field);color:var(--ink);background:var(--surface)}
+.btn-secondary:hover{background:var(--surface2)}
+.btn-quiet{color:var(--brand);padding:0 10px;min-height:44px}
+.btn-quiet:hover{background:var(--brand-soft)}
+.field{display:grid;gap:6px;margin-bottom:18px}
+.field>label,.legend{font-weight:600;font-size:14px}
+.field .hint{font-size:13px;color:var(--muted)}
+.input{height:48px;padding:0 14px;border:1px solid var(--field);border-radius:var(--r-ctl);background:var(--surface);width:100%}
+.input[aria-invalid="true"]{border-color:var(--danger);border-width:2px}
+.err{color:var(--danger);font-size:14px;font-weight:500}
+.with-prefix{display:flex;align-items:stretch}
+.with-prefix .pre{display:flex;align-items:center;padding:0 12px;border:1px solid var(--field);border-right:0;border-radius:var(--r-ctl) 0 0 var(--r-ctl);background:var(--surface2);color:var(--muted)}
+.with-prefix .input{border-radius:0 var(--r-ctl) var(--r-ctl) 0}
+.with-suffix{position:relative}
+.with-suffix .btn{position:absolute;right:2px;top:2px;min-height:44px;height:44px}
+
+/* Shell */
+.body{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto}
+.nav{position:sticky;top:0;width:224px;flex:none;padding:20px 12px;display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;min-height:44px;padding:0 14px;border-radius:var(--r-ctl);color:var(--muted);text-decoration:none;font-weight:600}
+.nav a:hover{background:var(--surface2);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--brand-soft);color:var(--brand)}
+main{flex:1;min-width:0;padding:28px 32px 64px}
+main:focus{outline:none}
+h1{font-size:28px;line-height:1.2;font-weight:700;letter-spacing:-.01em}
+h1:focus{outline:none}
+h2{font-size:18px;font-weight:700}
+h3{font-size:15px;font-weight:700}
+.page-head{margin-bottom:24px;display:grid;gap:4px}
+.page-head p{color:var(--muted);max-width:60ch}
+
+.banner{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 18px;border:1px solid var(--line);border-radius:var(--r-card);background:var(--brand-soft);margin-bottom:24px}
+.banner p{max-width:62ch}
+.banner.error{background:var(--danger-soft);border-color:var(--danger);color:var(--ink)}
+.banner.ok{background:var(--surface);border-color:var(--brand)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:24px}
+.card+.card{margin-top:20px}
+
+/* Identity motif: the diagonal dashes of the mark stand in for any value that is hidden or still loading */
+.mask,.ph{display:inline-block;border-radius:4px;background:repeating-linear-gradient(135deg,currentColor 0 3px,transparent 3px 8px);opacity:.5}
+.mask{width:7ch;height:.7em}
+.ph{width:100%;height:1em;color:var(--brand)}
+
+/* Overview */
+.ov{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;align-items:start}
+.ov .card+.card{margin-top:0}
+.balance .label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-weight:600}
+.balance .amount{font-size:clamp(2.25rem,6vw,3.5rem);font-weight:600;line-height:1.1;letter-spacing:-.02em;margin:10px 0 6px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.balance .amount small{font-size:1.125rem;font-weight:600;color:var(--muted);letter-spacing:0}
+.balance .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+.linkbox{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--surface2);margin:12px 0 16px;word-break:break-all}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:32px 0 12px}
+
+/* Activity list */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{min-height:44px;padding:0 16px;border:1px solid var(--field);border-radius:var(--r-ctl);background:var(--surface);cursor:pointer;font-weight:600}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden}
+.list .head,.row{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:center;padding:0 20px}
+.list .head{min-height:44px;font-size:13px;font-weight:600;color:var(--muted);background:var(--surface2)}
+.row{width:100%;min-height:64px;text-align:left;border:0;border-top:1px solid var(--line);background:none;cursor:pointer}
+.row:hover{background:var(--surface2)}
+.row .who small{display:block;color:var(--muted)}
+.amt{text-align:right;font-weight:600}
+.st{display:inline-block;padding:2px 10px;border-radius:6px;font-size:13px;font-weight:600;border:1px solid var(--field);color:var(--ink)}
+.st-private{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
+.st-out{background:var(--surface2);border-color:transparent}
+.empty{padding:48px 24px;text-align:center;display:grid;gap:12px;justify-items:center}
+.empty p{max-width:44ch;color:var(--muted)}
+
+/* Receive */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.card+.card.flat{margin-top:0}
+.preview{border:1px dashed var(--field);border-radius:var(--r-card);padding:20px;background:var(--bg)}
+.preview .tag{font-size:13px;color:var(--muted);margin-bottom:12px;display:block}
+.payer{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:24px;display:grid;gap:14px;justify-items:start}
+.payer img{height:24px;width:auto}
+.payer .to{color:var(--muted)}
+.payer .big{font-size:2rem;font-weight:700;letter-spacing:-.02em}
+.payer .btn{width:100%}
+.payer .fine{font-size:13px;color:var(--muted)}
+.qr{width:132px;height:132px;border:1px solid var(--field);border-radius:var(--r-ctl);display:grid;place-items:center;font-size:13px;color:var(--muted);background:
+  linear-gradient(var(--ink),var(--ink)) 8px 8px/28px 28px no-repeat,
+  linear-gradient(var(--ink),var(--ink)) right 8px top 8px/28px 28px no-repeat,
+  linear-gradient(var(--ink),var(--ink)) 8px bottom 8px/28px 28px no-repeat,var(--surface)}
+.qr span{background:var(--surface);padding:2px 6px;border-radius:4px}
+
+/* Cash out and reports */
+.stack{display:grid;gap:16px}
+.facts{display:grid;gap:14px}
+.facts li{padding-left:0}
+.facts strong{display:block}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 20px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{text-align:right;word-break:break-all}
+fieldset{border:0;padding:0;margin:0 0 18px;display:grid;gap:10px}
+.radio{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid var(--field);border-radius:var(--r-ctl);cursor:pointer;background:var(--surface)}
+.radio input{margin-top:5px;width:18px;height:18px;accent-color:var(--brand)}
+.radio:has(input:checked){border-color:var(--brand);background:var(--brand-soft)}
+.radio span span{display:block;color:var(--muted);font-size:14px}
+.dates{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.dates .input{min-width:0}
+.key{padding:14px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--surface2);word-break:break-all}
+
+/* Settings */
+.settings .card{display:grid;gap:14px}
+.seg{display:inline-flex;border:1px solid var(--field);border-radius:var(--r-ctl);overflow:hidden;width:max-content}
+.seg button{min-height:44px;padding:0 18px;background:var(--surface);border:0;cursor:pointer;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+/* Dialogs */
+dialog{border:1px solid var(--line);border-radius:var(--r-card);background:var(--surface);color:var(--ink);padding:0;width:min(480px,calc(100vw - 32px));box-shadow:0 12px 40px rgba(0,0,0,.25)}
+dialog::backdrop{background:var(--scrim)}
+.dlg{padding:28px;display:grid;gap:16px}
+.dlg .row-btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
+.dlg .row-btns .btn{flex:1;min-width:140px}
+.dlg h2{font-size:22px;letter-spacing:-.01em}
+.dlg .privacy{font-size:14px;color:var(--muted)}
+.cols{display:grid;gap:18px}
+.cols h3{margin-bottom:6px}
+.cols ul{display:grid;gap:4px;padding-left:18px;list-style:disc}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:var(--r-ctl);font-weight:600;z-index:60;max-width:calc(100vw - 32px)}
+.toast[hidden]{display:none}
+
+@media (max-width:980px){
+  .ov,.two{grid-template-columns:1fr}
+}
+@media (max-width:820px){
+  .nav{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;flex-direction:row;gap:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line);z-index:40}
+  .nav a{flex:1;justify-content:center;padding:0 2px;font-size:12px;text-align:center;min-width:0}
+  main{padding:20px 16px 112px}
+  .toast{bottom:84px}
+  .list .head{display:none}
+  .row{grid-template-columns:minmax(0,1fr) auto;padding:10px 16px}
+  .row .c-status{grid-column:1;grid-row:2}
+  .row .amt{grid-column:2;grid-row:1 / span 2}
+  .hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="wf" role="region" aria-label="Wireframe review controls">
+  <span>Wireframe review: pick a state to inspect. Not part of the product.</span>
+  <label>State
+    <select id="wfState">
+      <option value="demo">Signed out, demo data</option>
+      <option value="empty">New account, no payments</option>
+      <option value="live">Signed in, with payments</option>
+      <option value="loading">Signed in, loading</option>
+      <option value="error">Signed in, network error</option>
+    </select>
+  </label>
+</div>
+
+<header class="top">
+  <a href="#/overview" aria-label="Opaq, go to overview">
+    <img class="logo logo-light" src="assets/logo-light.svg" alt="">
+    <img class="logo logo-dark" src="assets/logo-dark.svg" alt="">
+  </a>
+  <span class="grow"></span>
+  <button class="btn btn-secondary" id="themeBtn" type="button"></button>
+  <span id="acct"></span>
+</header>
+
+<div class="body">
+  <nav class="nav" aria-label="Main">
+    <a href="#/overview" data-route="overview">Overview</a>
+    <a href="#/receive" data-route="receive">Receive</a>
+    <a href="#/activity" data-route="activity">Activity</a>
+    <a href="#/cashout" data-route="cashout">Cash out</a>
+    <a href="#/reports" data-route="reports">Reports</a>
+    <a href="#/settings" data-route="settings">Settings</a>
+  </nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+
+<dialog id="auth" aria-labelledby="authTitle"></dialog>
+<dialog id="detail" aria-labelledby="detailTitle"></dialog>
+<dialog id="confirm" aria-labelledby="confirmTitle"></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function fmt(n){return n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+/* Placeholder domain: the real one is not decided. */
+var LINK_BASE="opaq.example/@";
+var SAMPLE=[
+  {id:"p5",when:"Today, 14:02",payer:"7xK2…9fQa",amount:120,status:"waiting",stealth:"8dPq…Zr3c"},
+  {id:"p4",when:"Today, 09:41",payer:"Fh3n…c2Ld",amount:450,status:"private",stealth:"Gk9a…T1vW"},
+  {id:"p3",when:"Yesterday, 17:20",payer:"Bq7r…m8Ye",amount:75.5,status:"private",stealth:"3uJd…Pa6s"},
+  {id:"p2",when:"6 Oct, 11:05",payer:"Ds4w…x0Hn",amount:1000,status:"private",stealth:"Ln2c…Ve8k"},
+  {id:"c1",when:"5 Oct, 16:30",payer:"",amount:-280,status:"out",stealth:"",dest:"4tNb…Wq7e"},
+  {id:"p1",when:"3 Oct, 08:12",payer:"Yz6e…k4Ra",amount:1235,status:"private",stealth:"Rw5m…Ch0f"}
+];
+var S={mode:"demo",net:"ok",theme:"light",handle:"demo",reveal:true,filter:"all",pays:SAMPLE.slice(),bal:2480.5,report:null,notice:null,pending:null};
+try{var t=localStorage.getItem("opaq-wf-theme");if(t==="dark"||t==="light")S.theme=t}catch(e){}
+
+var STATES={
+  demo:{mode:"demo",net:"ok"},empty:{mode:"empty",net:"ok"},live:{mode:"live",net:"ok"},
+  loading:{mode:"live",net:"loading"},error:{mode:"live",net:"error"}
+};
+function setState(key){
+  var s=STATES[key];S.mode=s.mode;S.net=s.net;S.report=null;S.notice=null;
+  if(s.mode==="empty"){S.pays=[];S.bal=0;S.handle="yourhandle"}
+  else{S.pays=SAMPLE.slice();S.bal=2480.5;S.handle="demo"}
+  S.reveal=s.mode==="demo";
+  $("#wfState").value=key;render();
+}
+function stateKey(){
+  if(S.mode==="demo")return"demo";if(S.mode==="empty")return"empty";
+  return S.net==="loading"?"loading":S.net==="error"?"error":"live";
+}
+
+function toast(msg){
+  var t=$("#toast");t.textContent=msg;t.hidden=false;
+  clearTimeout(toast._t);toast._t=setTimeout(function(){t.hidden=true},3200);
+}
+function link(extra){return LINK_BASE+S.handle+(extra||"")}
+function route(){var h=(location.hash||"#/overview").replace("#/","");return /^(overview|receive|activity|cashout|reports|settings)$/.test(h)?h:"overview"}
+
+/* Gate: in demo every action that would touch an account opens Create account. */
+var ACTION_LABEL={copy:"copy your payment link",cashout:"cash out",report:"create view access",csv:"export your payments",create:"get your own payment link"};
+function gate(name,fn){
+  if(S.mode==="demo"){openAuth(name);return}
+  fn();
+}
+
+function amountHTML(n,opts){
+  opts=opts||{};
+  if(S.net==="loading")return '<span class="ph" aria-hidden="true"></span><span class="sr">Loading</span>';
+  if(S.net==="error")return '<span class="muted">Unavailable</span>';
+  if(!S.reveal)return '<span class="mask" role="img" aria-label="Hidden"></span>';
+  return (opts.sign&&n>0?"+":"")+fmt(n);
+}
+
+/* Views */
+function viewOverview(){
+  var pend=S.pays.filter(function(p){return p.status==="waiting"}).reduce(function(a,p){return a+p.amount},0);
+  var netBanner=S.net==="error"?errBanner():"";
+  var recent=S.pays.slice(0,4);
+  var pendLine=S.net!=="ok"?"":pend>0?'<p class="muted"><span class="num">'+fmt(pend)+' USDC</span> has arrived and is waiting to move into your private balance.</p>':
+    S.mode==="empty"?'<p class="muted">Nothing here yet. Your first payment will show up as soon as it lands.</p>':'<p class="muted">Everything received is in your private balance.</p>';
+  var list=S.net==="loading"?loadingRows(3):recent.length?listHTML(recent,false):
+    (S.net==="error"?"":emptyActivity());
+  return head("Overview","Your private balance and what came in recently.")+netBanner+
+  '<div class="ov"><section class="card balance" aria-labelledby="balLabel" '+(S.net==="loading"?'aria-busy="true"':"")+'>'+
+    '<div class="label"><span id="balLabel">Private balance</span>'+
+    '<button class="btn btn-quiet" type="button" data-reveal aria-pressed="'+(S.reveal?"true":"false")+'">'+(S.reveal?"Hide amounts":"Show amounts")+'</button></div>'+
+    '<div class="amount num">'+amountHTML(S.bal)+'<small>USDC</small></div>'+pendLine+
+    '<div class="actions"><button class="btn btn-primary" type="button" data-go="cashout">Cash out</button>'+
+    '<button class="btn btn-secondary" type="button" data-act="copy">Copy payment link</button></div></section>'+
+    '<section class="card" aria-labelledby="lnkH"><h2 id="lnkH">Your payment link</h2>'+
+    '<div class="linkbox mono">'+esc(link())+'</div>'+
+    '<p class="muted">Anyone with this link can pay you. They see your handle, never your wallet or balance.</p>'+
+    '<p style="margin-top:12px"><a href="#/receive">Set an amount or get the QR code</a></p></section></div>'+
+  '<div class="section-head"><h2>Recent activity</h2>'+(S.pays.length?'<a href="#/activity">See all activity</a>':"")+'</div>'+list;
+}
+
+function head(t,p){return '<div class="page-head"><h1 tabindex="-1" id="h1">'+t+'</h1><p>'+p+'</p></div>'}
+function errBanner(){
+  return '<div class="banner error" role="alert"><p><strong>Couldn\'t load your payments.</strong> The network didn\'t respond. Your funds are not affected.</p><button class="btn btn-secondary" type="button" data-retry>Try again</button></div>';
+}
+function loadingRows(n){
+  var s='<div class="list" aria-busy="true"><div class="sr">Loading payments</div>';
+  for(var i=0;i<n;i++)s+='<div class="row" style="cursor:default"><span><span class="ph" aria-hidden="true" style="width:60%"></span></span><span><span class="ph" aria-hidden="true" style="width:50%"></span></span><span><span class="ph" aria-hidden="true"></span></span></div>';
+  return s+'</div>';
+}
+function emptyActivity(){
+  return '<div class="list"><div class="empty"><h3>No payments yet</h3><p>Share your payment link to receive your first one. It will appear here the moment it lands.</p>'+
+  '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary" type="button" data-act="copy">Copy payment link</button><a class="btn btn-secondary" href="#/receive">Open Receive</a></div></div></div>';
+}
+function statusChip(s){
+  return s==="private"?'<span class="st st-private">Private</span>':s==="waiting"?'<span class="st">Waiting to move</span>':'<span class="st st-out">Cashed out</span>';
+}
+function listHTML(items,withHead){
+  var h=withHead?'<div class="head" aria-hidden="true"><span>When</span><span>Status</span><span style="text-align:right">Amount (USDC)</span></div>':"";
+  return '<ul class="list">'+(h?'<li>'+h+'</li>':"")+items.map(function(p){
+    var who=p.status==="out"?'Cash out<small>To '+esc(p.dest)+'</small>':'From '+esc(p.payer)+'<small>'+esc(p.when)+'</small>';
+    if(p.status==="out")who='Cash out<small>'+esc(p.when)+' to '+esc(p.dest)+'</small>';
+    return '<li><button class="row" type="button" data-pay="'+p.id+'"><span class="who">'+who+'</span><span class="c-status">'+statusChip(p.status)+'</span><span class="amt num">'+amountHTML(p.amount,{sign:true})+'</span></button></li>';
+  }).join("")+'</ul>';
+}
+
+function viewActivity(){
+  var items=S.pays.filter(function(p){return S.filter==="all"||(S.filter==="waiting"&&p.status==="waiting")||(S.filter==="private"&&p.status==="private")||(S.filter==="out"&&p.status==="out")});
+  var body;
+  if(S.net==="loading")body=loadingRows(5);
+  else if(S.net==="error")body=errBanner();
+  else if(!S.pays.length)body=emptyActivity();
+  else if(!items.length)body='<div class="list"><div class="empty"><h3>Nothing matches this filter</h3><p>Try another filter to see the rest of your activity.</p><button class="btn btn-secondary" type="button" data-filter="all">Show all</button></div></div>';
+  else body=listHTML(items,true);
+  var chips=[["all","All"],["waiting","Waiting to move"],["private","Private"],["out","Cashed out"]].map(function(c){
+    return '<button class="chip" type="button" data-filter="'+c[0]+'" aria-pressed="'+(S.filter===c[0])+'">'+c[1]+'</button>'}).join("");
+  return head("Activity","Every payment that reached you, and every cash out.")+
+    '<div class="chips" role="group" aria-label="Filter activity">'+chips+'</div>'+body+
+    '<p class="muted" style="margin-top:16px;max-width:64ch">Open a row to see what is public about it and what is not.</p>';
+}
+
+function viewReceive(){
+  var amt=S._amt||"",note=S._note||"";
+  var q=[];if(amt)q.push("amount="+encodeURIComponent(amt));if(note)q.push("note="+encodeURIComponent(note));
+  var url=link(q.length?"?"+q.join("&"):"");
+  return head("Receive","Share one link. Each payment goes to a fresh address that only you can find.")+
+  '<div class="two"><div><section class="card" aria-labelledby="rl"><h2 id="rl">Your link</h2>'+
+    '<div class="linkbox mono" id="recvLink">'+esc(url)+'</div>'+
+    '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-act="copy-recv">Copy link</button><div class="qr" role="img" aria-label="QR code placeholder"><span>[QR]</span></div></div></section>'+
+    '<section class="card" aria-labelledby="rq"><h2 id="rq" style="margin-bottom:14px">Ask for a specific amount</h2>'+
+    '<div class="field"><label for="amt">Amount (USDC)</label><input class="input num" id="amt" inputmode="decimal" placeholder="Leave empty to let the payer choose" value="'+esc(amt)+'"></div>'+
+    '<div class="field" style="margin-bottom:0"><label for="note">What it\'s for</label><input class="input" id="note" maxlength="80" placeholder="Invoice, order, tip" value="'+esc(note)+'"><span class="hint">The payer sees this on the payment page.</span></div></section></div>'+
+  '<div class="preview" inert><span class="tag">Preview: what your payer sees</span><div class="payer">'+
+    '<img class="logo-light" src="assets/logo-light.svg" alt=""><img class="logo-dark" src="assets/logo-dark.svg" alt="">'+
+    '<p class="to">Pay @'+esc(S.handle)+'</p><p class="big num">'+(amt?esc(amt)+" USDC":"Enter an amount")+'</p>'+(note?'<p>'+esc(note)+'</p>':"")+
+    '<p class="muted">Paying with USDC on Solana. Base is coming soon.</p>'+
+    '<button class="btn btn-primary" type="button" tabindex="-1">Pay with wallet</button>'+
+    '<p class="fine">Your address and the amount you send are public. @'+esc(S.handle)+' is not linked to your wallet or balance.</p></div></div></div>';
+}
+
+function viewCashout(){
+  var avail=S.net==="loading"?'<span class="ph" aria-hidden="true" style="width:6ch"></span>':fmt(S.bal);
+  var notice=S.notice?'<div class="banner ok" role="status"><p>'+esc(S.notice)+'</p></div>':"";
+  return head("Cash out","Move USDC from your private balance to an address you choose.")+notice+
+  '<div class="two"><form class="card" id="coForm" novalidate>'+
+    '<div class="field"><label for="coAmt">Amount (USDC)</label><div class="with-suffix"><input class="input num" id="coAmt" inputmode="decimal" autocomplete="off" aria-describedby="coAmtH coAmtE"><button class="btn btn-quiet" type="button" data-max>Max</button></div>'+
+    '<span class="hint" id="coAmtH">Available: <span class="num">'+avail+'</span> USDC</span><span class="err" id="coAmtE" role="alert"></span></div>'+
+    '<div class="field"><label for="coTo">Send to</label><input class="input mono" id="coTo" autocomplete="off" spellcheck="false" aria-describedby="coToH coToE"><span class="hint" id="coToH">A Solana address. Use a new one if you want it separate from your other wallets.</span><span class="err" id="coToE" role="alert"></span></div>'+
+    '<button class="btn btn-primary" type="submit" data-gated="cashout">Review cash out</button></form>'+
+  '<section class="card" aria-labelledby="bf"><h2 id="bf" style="margin-bottom:14px">Before you send</h2><ul class="facts">'+
+    '<li><strong>It happens in two transactions.</strong><span class="muted">First your balance is unshielded, then USDC is withdrawn 1:1. You approve once.</span></li>'+
+    '<li><strong>The amount and the address become public.</strong><span class="muted">Anyone can see that this amount left Opaq for that address.</span></li>'+
+    '<li><strong>Your own wallet links back to you.</strong><span class="muted">If you send to a wallet people already know is yours, they can connect it to these payments.</span></li>'+
+    '<li><strong>Network fees are covered.</strong><span class="muted">The Opaq relayer pays them. The protocol fee is capped at 1% on-chain.</span></li></ul></section></div>';
+}
+
+function viewReports(){
+  var r=S.report;
+  var out=r?'<div class="card" role="status"><h2 style="margin-bottom:10px">View access ready</h2><p class="muted" style="margin-bottom:12px">'+esc(r.desc)+' Sample key for this wireframe.</p><div class="key mono">'+esc(r.key)+'</div><div style="margin-top:14px"><button class="btn btn-secondary" type="button" data-act="copy-key">Copy key</button></div></div>':"";
+  return head("Reports","Give an accountant or auditor read-only access, or export your payments.")+
+  '<div class="two"><div><form class="card" id="rpForm" novalidate><h2 style="margin-bottom:14px">Create view access</h2>'+
+    '<fieldset><legend class="legend">What can they see?</legend>'+
+      '<label class="radio"><input type="radio" name="scope" value="range" checked><span><strong>A date range</strong><span>Only payments between two dates.</span></span></label>'+
+      '<label class="radio"><input type="radio" name="scope" value="all"><span><strong>Everything</strong><span>All payments, past and future. Cannot be narrowed later.</span></span></label></fieldset>'+
+    '<div class="dates" id="dates"><div class="field"><label for="from">From</label><input class="input" type="date" id="from"></div><div class="field"><label for="to">To</label><input class="input" type="date" id="to"></div></div>'+
+    '<div class="field"><label for="who">Who is it for</label><input class="input" id="who" maxlength="60" placeholder="Accountant, auditor"><span class="hint">Only a label for you. It is not sent anywhere.</span></div>'+
+    '<span class="err" id="rpE" role="alert" style="display:block;margin-bottom:12px"></span>'+
+    '<button class="btn btn-primary" type="submit" data-gated="report">Create view access</button></form>'+out+'</div>'+
+  '<div><section class="card" aria-labelledby="ex"><h2 id="ex" style="margin-bottom:8px">Export payments</h2><p class="muted" style="margin-bottom:16px">A CSV of what you received and cashed out, for your own books.</p><button class="btn btn-secondary" type="button" data-act="csv">Export CSV</button></section>'+
+  '<section class="card" aria-labelledby="wh"><h2 id="wh" style="margin-bottom:8px">What view access allows</h2><ul class="facts"><li><strong>They can see</strong><span class="muted">Payments to you in the range, with amounts and dates.</span></li><li><strong>They cannot</strong><span class="muted">Spend, move or cash out anything.</span></li></ul></section></div></div>';
+}
+
+function viewSettings(){
+  var acct=S.mode==="demo"?'<section class="card"><h2>Account</h2><p class="muted">You are looking at a demo account. Create an account to get your own handle and payment link.</p><div><button class="btn btn-primary" type="button" data-open-auth>Create account</button></div></section>':
+  '<section class="card"><h2>Account</h2><dl class="kv"><dt>Handle</dt><dd>@'+esc(S.handle)+'</dd><dt>Signed in with</dt><dd>Google [REAL DATA]</dd></dl><div><button class="btn btn-secondary" type="button" data-signout>Sign out</button></div></section>'+
+  '<section class="card"><h2>Keys</h2><p class="muted">Your spend key stays with you. Opaq cannot move your funds. Backup and recovery options depend on the wallet provider, which is still to be decided.</p></section>';
+  return head("Settings","Your account and how Opaq looks for you.")+'<div class="settings stack" style="max-width:640px">'+acct+
+  '<section class="card"><h2>Appearance</h2><div class="seg" role="group" aria-label="Theme"><button type="button" data-theme-set="light" aria-pressed="'+(S.theme==="light")+'">Light</button><button type="button" data-theme-set="dark" aria-pressed="'+(S.theme==="dark")+'">Dark</button></div></section></div>';
+}
+
+/* Render */
+function render(){
+  document.documentElement.setAttribute("data-theme",S.theme);
+  var tb=$("#themeBtn");tb.textContent=S.theme==="light"?"Dark mode":"Light mode";
+  tb.setAttribute("aria-label",S.theme==="light"?"Switch to dark mode":"Switch to light mode");
+  $("#acct").innerHTML=S.mode==="demo"?'<button class="btn btn-primary hide-sm" type="button" data-open-auth>Create account</button>':'<a class="btn btn-secondary hide-sm" href="#/settings">@'+esc(S.handle)+'</a>';
+  var r=route();
+  $$(".nav a").forEach(function(a){if(a.dataset.route===r)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+  var demo=S.mode==="demo"?'<div class="banner"><p><strong>You\'re viewing a demo with sample data.</strong> Nothing here is real. Create an account to receive your own payments.</p><button class="btn btn-primary" type="button" data-open-auth>Create account</button></div>':"";
+  var v={overview:viewOverview,receive:viewReceive,activity:viewActivity,cashout:viewCashout,reports:viewReports,settings:viewSettings}[r]();
+  $("#main").innerHTML=demo+v;
+  document.title={overview:"Overview",receive:"Receive",activity:"Activity",cashout:"Cash out",reports:"Reports",settings:"Settings"}[r]+" | Opaq Pay Wireframe";
+}
+function renderKeepFocus(){
+  var a=document.activeElement,id=a&&a.id,start=a&&a.selectionStart;
+  render();
+  if(id){var n=document.getElementById(id);if(n){n.focus();try{n.setSelectionRange(start,start)}catch(e){}}}
+}
+
+/* Auth dialog */
+function openAuth(name){
+  S.pending=name||null;
+  var why=name&&ACTION_LABEL[name]?"To "+ACTION_LABEL[name]+", you need an account.":"To receive payments, you need an account.";
+  $("#auth").innerHTML='<div class="dlg"><h2 id="authTitle">Create your Opaq account</h2><p>'+why+' You can keep looking around the demo without one.</p>'+
+   '<div class="stack"><button class="btn btn-primary" type="button" data-auth-next>Continue with Google</button>'+
+   '<button class="btn btn-secondary" type="button" data-auth-next>Use Phantom or Solflare</button></div>'+
+   '<p class="privacy">Your spend key stays with you. Opaq cannot move your funds.</p>'+
+   '<button class="btn btn-quiet" type="button" data-close="auth">Not now</button></div>';
+  $("#auth").showModal();
+}
+function authHandle(){
+  $("#auth").innerHTML='<form class="dlg" id="hForm" novalidate><h2 id="authTitle">Choose your handle</h2><p class="muted">This is how people find your payment link.</p>'+
+   '<div class="field" style="margin:0"><label for="hIn">Handle</label><div class="with-prefix"><span class="pre" aria-hidden="true">@</span><input class="input" id="hIn" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="hHint hErr"></div>'+
+   '<span class="hint" id="hHint">3 to 32 characters: a to z, 0 to 9 and underscore. Your handle is public.</span><span class="err" id="hErr" role="alert"></span></div>'+
+   '<div class="row-btns"><button class="btn btn-secondary" type="button" data-close="auth">Cancel</button><button class="btn btn-primary" type="submit">Register handle</button></div></form>';
+  setTimeout(function(){var i=$("#hIn");if(i)i.focus()},0);
+}
+
+/* Detail dialog */
+function openDetail(id){
+  var p=S.pays.filter(function(x){return x.id===id})[0];if(!p)return;
+  var body;
+  if(p.status==="out"){
+    body='<div class="cols"><div><h3>Visible to anyone</h3><ul><li>That '+fmt(-p.amount)+' USDC left Opaq</li><li>The address it went to: <span class="mono">'+esc(p.dest)+'</span></li><li>When it happened</li></ul></div>'+
+    '<div><h3>Not visible</h3><ul><li>Which of your payments it came from</li><li>What is left in your balance</li></ul></div>'+
+    '<p class="muted">If that address is a wallet people know is yours, they can link it to your Opaq payments.</p></div>';
+  }else{
+    body='<div class="cols"><div><h3>Visible to anyone</h3><ul><li>The payer: <span class="mono">'+esc(p.payer)+'</span></li><li>How much they sent: <span class="num">'+fmt(p.amount)+' USDC</span></li><li>The one-time address it went to: <span class="mono">'+esc(p.stealth)+'</span></li><li>When it happened</li></ul></div>'+
+    '<div><h3>Not visible</h3><ul><li>That the payment belongs to you</li><li>Your wallet and your handle on this payment</li><li>Your balance once it is shielded</li></ul></div>'+
+    '<p class="muted">Timing can still hint at who you are. Anyone you give view access to can see this payment.</p></div>';
+  }
+  var title=p.status==="out"?"Cash out of "+fmt(-p.amount)+" USDC":"Payment of "+fmt(p.amount)+" USDC";
+  $("#detail").innerHTML='<div class="dlg"><div><h2 id="detailTitle">'+title+'</h2><p class="muted">'+esc(p.when)+'</p></div>'+statusChip(p.status)+body+'<button class="btn btn-secondary" type="button" data-close="detail">Close</button></div>';
+  $("#detail").showModal();
+}
+
+/* Cash out */
+var ADDR=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+function cashoutSubmit(){
+  var a=parseFloat($("#coAmt").value.replace(",",".")),to=$("#coTo").value.trim(),ok=true;
+  var ae=$("#coAmtE"),te=$("#coToE");ae.textContent="";te.textContent="";
+  $("#coAmt").removeAttribute("aria-invalid");$("#coTo").removeAttribute("aria-invalid");
+  if(!(a>0)){ae.textContent="Enter an amount greater than 0.";ok=false}
+  else if(a>S.bal){ae.textContent=S.bal===0?"You have nothing to cash out yet.":"That's more than your available "+fmt(S.bal)+" USDC.";ok=false}
+  if(!ADDR.test(to)){te.textContent="That doesn't look like a Solana address.";ok=false}
+  if(!ok){var f=!(a>0&&a<=S.bal)?"#coAmt":"#coTo";$(f).setAttribute("aria-invalid","true");$(f).focus();return}
+  var short=to.slice(0,4)+"…"+to.slice(-4);
+  $("#confirm").innerHTML='<div class="dlg"><h2 id="confirmTitle">Review cash out</h2><dl class="kv"><dt>Amount</dt><dd class="num">'+fmt(a)+' USDC</dd><dt>To</dt><dd class="mono">'+esc(short)+'</dd><dt>Steps</dt><dd>Unshield, then withdraw</dd><dt>Network fee</dt><dd>Paid by the relayer</dd></dl>'+
+   '<p class="muted">The amount and the address will be public.</p><div class="row-btns"><button class="btn btn-secondary" type="button" data-close="confirm">Back</button><button class="btn btn-primary" type="button" data-confirm-out="'+a+'|'+esc(short)+'">Confirm cash out</button></div></div>';
+  $("#confirm").showModal();
+}
+
+/* Events */
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button,a,[data-pay]");if(!t)return;
+  if(t.matches("[data-open-auth]")){openAuth("create");return}
+  if(t.matches("[data-auth-next]")){authHandle();return}
+  if(t.dataset.close){$("#"+t.dataset.close).close();return}
+  if(t.matches("[data-reveal]")){S.reveal=!S.reveal;render();$("[data-reveal]").focus();return}
+  if(t.matches("[data-retry]")){setState("live");return}
+  if(t.dataset.go){location.hash="#/"+t.dataset.go;return}
+  if(t.dataset.filter){S.filter=t.dataset.filter;render();var c=$('[data-filter="'+S.filter+'"]');if(c)c.focus();return}
+  if(t.dataset.pay){openDetail(t.dataset.pay);return}
+  if(t.matches("[data-max]")){$("#coAmt").value=S.bal>0?String(S.bal):"";$("#coAmt").focus();return}
+  if(t.dataset.themeSet){S.theme=t.dataset.themeSet;try{localStorage.setItem("opaq-wf-theme",S.theme)}catch(x){}render();return}
+  if(t.matches("[data-signout]")){setState("demo");toast("Signed out. Back to the demo.");return}
+  if(t.id==="themeBtn"){S.theme=S.theme==="light"?"dark":"light";try{localStorage.setItem("opaq-wf-theme",S.theme)}catch(x){}render();return}
+  var act=t.dataset.act;
+  if(act==="copy")gate("copy",function(){copyText(link(),"Payment link copied")});
+  if(act==="copy-recv")gate("copy",function(){copyText($("#recvLink").textContent,"Link copied")});
+  if(act==="copy-key")copyText(S.report.key,"Key copied");
+  if(act==="csv")gate("csv",exportCsv);
+  if(t.dataset.confirmOut){
+    var parts=t.dataset.confirmOut.split("|"),a=parseFloat(parts[0]);
+    S.bal=Math.max(0,S.bal-a);S.pays.unshift({id:"c"+Date.now(),when:"Just now",payer:"",amount:-a,status:"out",stealth:"",dest:parts[1]});
+    S.notice="Cashed out "+fmt(a)+" USDC to "+parts[1]+". It now shows in Activity.";
+    $("#confirm").close();render();$("#h1").focus();
+  }
+});
+document.addEventListener("submit",function(e){
+  e.preventDefault();
+  if(e.target.id==="coForm"){gate("cashout",cashoutSubmit)}
+  if(e.target.id==="rpForm"){gate("report",reportSubmit)}
+  if(e.target.id==="hForm"){handleSubmit()}
+});
+document.addEventListener("input",function(e){
+  if(e.target.id==="amt"||e.target.id==="note"){S._amt=$("#amt").value.trim();S._note=$("#note").value;renderKeepFocus()}
+  if(e.target.name==="scope"){$("#dates").style.display=e.target.value==="range"?"grid":"none"}
+});
+document.addEventListener("click",function(e){ /* backdrop click closes dialogs */
+  if(e.target.tagName==="DIALOG")e.target.close();
+});
+window.addEventListener("hashchange",function(){S.notice=null;render();$("#h1").focus()});
+$("#wfState").addEventListener("change",function(e){setState(e.target.value)});
+
+function copyText(txt,msg){
+  var done=function(){toast(msg)};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,done)}else done();
+}
+function exportCsv(){
+  var rows=["when,type,counterparty,amount_usdc"].concat(S.pays.map(function(p){return [p.when,p.status==="out"?"cash out":"payment",p.status==="out"?p.dest:p.payer,p.amount].join(",")}));
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows.join("\n")],{type:"text/csv"}));a.download="opaq-payments.csv";document.body.appendChild(a);a.click();a.remove();
+  toast("CSV exported");
+}
+function reportSubmit(){
+  var scope=$('input[name="scope"]:checked').value,from=$("#from").value,to=$("#to").value,e=$("#rpE");e.textContent="";
+  if(scope==="range"){
+    if(!from||!to){e.textContent="Pick both dates.";return}
+    if(from>to){e.textContent="The start date must be before the end date.";return}
+  }
+  var b=new Uint8Array(18);crypto.getRandomValues(b);
+  var key="opaqvk1"+Array.prototype.map.call(b,function(x){return"abcdefghijklmnopqrstuvwxyz234567"[x%32]}).join("");
+  S.report={key:key,desc:scope==="range"?"Covers payments from "+from+" to "+to+".":"Covers every payment, past and future."};
+  render();
+}
+function handleSubmit(){
+  var v=$("#hIn").value.trim(),e=$("#hErr");e.textContent="";$("#hIn").removeAttribute("aria-invalid");
+  var bad=!/^[a-z0-9_]{3,32}$/.test(v)?"Use 3 to 32 characters: a to z, 0 to 9 and underscore.":["demo","admin","opaq","test"].indexOf(v)>-1?"That handle is taken. Try another.":"";
+  if(bad){e.textContent=bad;$("#hIn").setAttribute("aria-invalid","true");$("#hIn").focus();return}
+  $("#auth").close();
+  S.mode="empty";S.net="ok";S.handle=v;S.pays=[];S.bal=0;S.reveal=false;$("#wfState").value="empty";
+  location.hash="#/overview";render();$("#h1").focus();toast("Account created. Your link is ready.");
+}
+
+setState("demo");
+})();
+</script>
+</body>
+</html>
