@@ -41,6 +41,11 @@ export function AppPreview() {
                   <span>Anyone can see who paid you and how much. They can&apos;t see which wallet is yours or what your balance is.</span>
                 </div>
                 <span className="pv-set"><img src="/home/page/nav-settings.svg" alt="" />Settings</span>
+                <span className="pv-set pv-theme">
+                  <svg className="pv-theme-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.5 9.2A6 6 0 116.8 2.5a4.8 4.8 0 006.7 6.7z" /></svg>
+                  <svg className="pv-theme-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2.8" /><path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M12.6 3.4l-1 1M4.4 11.6l-1 1" /></svg>
+                  <span className="pv-theme-moon">Dark mode</span><span className="pv-theme-sun">Light mode</span>
+                </span>
               </div>
             </nav>
           </aside>
@@ -49,7 +54,6 @@ export function AppPreview() {
               <b>Overview</b>
               <span className="pv-grow" />
               <span className="pv-pill"><img src="/home/page/solana.svg" alt="" />Solana Devnet</span>
-              <span className="pv-moon"><img src="/home/page/icon-moon.svg" alt="" /></span>
               <span className="pv-addr">7xK2…9fQa</span>
               <span className="pv-acct"><i>Y</i>@yourhandle</span>
             </header>

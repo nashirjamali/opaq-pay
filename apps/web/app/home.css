@@ -313,6 +313,13 @@
 .pv-note { display: grid; gap: 4.444px; padding: 10.37px; border: 0.741px solid #e3e3e8; border-radius: 8.889px; background: #fff; }
 .pv-note b { font-size: 10.37px; font-weight: 500; }
 .pv-note span { font-size: 8.889px; line-height: 1.35; letter-spacing: 0.0444px; color: #717184; }
+.pv-theme { color: #717184; }
+.pv-theme span { color: #131316; }
+.pv-theme-sun { display: none; }
+:root[data-theme="dark"] .pv-theme-moon { display: none; }
+:root[data-theme="dark"] .pv-theme-sun { display: inline; }
+:root[data-theme="dark"] .pv-theme { color: #9c9cab; }
+:root[data-theme="dark"] .pv-theme span { color: #f4f4f6; }
 .pv-set { display: flex; align-items: center; gap: 8.889px; padding: 8.889px 10.37px; font-size: 10.37px; font-weight: 500; }
 .pv-main { width: 936.296px; display: flex; flex-direction: column; }
 .pv-head { height: 53.333px; display: flex; align-items: center; gap: 8.889px; padding: 0 23.704px; border-bottom: 0.741px solid #e3e3e8; }
