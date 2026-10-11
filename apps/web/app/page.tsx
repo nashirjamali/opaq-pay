@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { SolanaMark, UsdcOnSolana } from "@/components/TokenMarks";
 import { HomeMenu } from "@/components/home/HomeMenu";
 import { AppPreview } from "@/components/home/AppPreview";
 import { HeroArt } from "@/components/home/HeroArt";
@@ -148,7 +149,7 @@ export default function HomePage() {
             <div className="hp-two">
               <article className="hp-card hp-road">
                 <div className="hp-road-art" aria-hidden="true">
-                  <span className="hp-chain hp-chain-on"><b>Solana</b>Live on devnet</span>
+                  <span className="hp-chain hp-chain-on"><b><SolanaMark size={24} />Solana</b>Live on devnet</span>
                   <img src="/home/page/icon-arrow-right.svg" alt="" />
                   <span className="hp-chain hp-chain-off"><b>More chains</b>Next</span>
                 </div>
@@ -213,7 +214,7 @@ export default function HomePage() {
               <span className="hp-tag hp-pay-tag">Example of what payers see</span>
               <span className="muted">Pay @yourhandle</span>
               <b>Choose an amount</b>
-              <div className="hp-seg"><span className="on">Solana USDC</span><span>More chains, soon</span></div>
+              <div className="hp-seg"><span className="on"><UsdcOnSolana size={20} />Solana USDC</span><span>More chains, soon</span></div>
               <span className="btn btn-primary">Pay with wallet</span>
             </div>
           </section>

@@ -64,7 +64,7 @@
 .art-payer b { font-size: 14px; font-weight: 500; line-height: 1.45; color: #131316; }
 .art-payer .mono { font-size: 11px; line-height: normal; color: #717184; letter-spacing: 0; }
 .art-coin { position: absolute; left: 150px; top: 282px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #fff; border: 1px solid #e3e3e8; box-shadow: 0 8px 16px rgba(14, 6, 55, 0.18); color: #131316; font-size: 18px; font-weight: 500; line-height: 1.55; }
-.art-pill { position: absolute; left: 118px; top: 240px; height: 28px; box-sizing: border-box; display: flex; align-items: center; padding: 5px 12px 5px 10px; border-radius: 999px; background: #fff; border: 1px solid #e3e3e8; color: #131316; font-size: 12px; font-weight: 500; line-height: 1.35; letter-spacing: 0.06px; white-space: nowrap; }
+.art-pill { position: absolute; left: 100px; top: 240px; height: 28px; box-sizing: border-box; display: flex; align-items: center; padding: 5px 12px 5px 10px; border-radius: 999px; background: #fff; border: 1px solid #e3e3e8; color: #131316; font-size: 12px; font-weight: 500; line-height: 1.35; letter-spacing: 0.06px; white-space: nowrap; }
 .art-shield { position: absolute; left: 216px; top: 180px; width: 112px; height: 112px; overflow: hidden; filter: drop-shadow(0 14px 13px rgba(14, 6, 55, 0.18)); }
 .art-shield-mask { position: absolute; top: 0; right: -33.93%; bottom: -105.36%; left: -53.57%; -webkit-mask-image: url(/home/hero/shield-mask.svg); mask-image: url(/home/hero/shield-mask.svg); -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: 60px 0; mask-position: 60px 0; -webkit-mask-size: 112px 112px; mask-size: 112px 112px; mask-mode: alpha; }
 .art-shield-mask img { position: absolute; top: 0; left: -0.58%; }
@@ -356,3 +356,9 @@ img.for-dark { display: none; }
 
 /* Section headers: only the hero keeps an eyebrow. The roadmap header is left-aligned so the sections do not all open the same way. */
 .hp-head-left { text-align: left; justify-items: start; margin-left: 0; max-width: none; }
+
+/* Chain and token logos on the landing page */
+.art-pill { gap: 6px; }
+.art-coin .mark { display: block; }
+.hp-chain b { display: flex; align-items: center; gap: 8px; }
+.hp-seg span { display: inline-flex; align-items: center; gap: 10px; }

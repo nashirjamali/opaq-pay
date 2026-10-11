@@ -354,3 +354,13 @@ dialog[open] { animation: pop 160ms ease; }
 }
 @media (max-width: 480px) { .top { gap: 8px; } }
 @media (max-width: 520px) { .soon { flex-direction: column; } .pay-card { padding: 24px; } }
+
+/* Chain and token logos */
+.mark { display: inline-block; flex: none; vertical-align: middle; border-radius: 50%; }
+.tok { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+.tok-chain { position: relative; display: inline-block; flex: none; }
+.tok-chain .mark { display: block; }
+.tok-badge { position: absolute; right: -3px; bottom: -3px; display: block; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 1.5px var(--surface); }
+.tok-badge .mark { display: block; }
+.seg button { display: inline-flex; align-items: center; gap: 10px; }
+.net .mark { margin-right: -2px; }

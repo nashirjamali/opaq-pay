@@ -6,6 +6,7 @@ import { config } from "@/lib/opaq/env";
 import { useNavDrawer } from "@/lib/navDrawer";
 import { useSession } from "@/lib/session";
 import { Logo } from "./Logo";
+import { SolanaMark } from "./TokenMarks";
 
 const TITLES: Record<string, string> = {
   "/overview": "Overview",
@@ -31,7 +32,7 @@ export function Header() {
       <span className="top-title" aria-hidden="true">{title}</span>
       <span className="grow" />
       <span className="net mono" title="Network this app is connected to">
-        <SolanaMark />
+        <SolanaMark size={16} />
         Solana {config.cluster === "devnet" ? "Devnet" : "Local"}
       </span>
       {address && <span className="addr mono" title={address}>{address.slice(0, 4)}…{address.slice(-4)}</span>}
@@ -46,14 +47,5 @@ export function Header() {
         </Link>
       )}
     </header>
-  );
-}
-
-/** Solana's three-bar mark, drawn flat so it takes the surrounding text color. */
-function SolanaMark() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false" className="ic">
-      <path fill="currentColor" d="M3 2.2h9.2l-1.4 2H1.6zM3 6h9.2l-1.4 2H1.6zM10.8 9.8H1.6l1.4 2h9.2z" />
-    </svg>
   );
 }

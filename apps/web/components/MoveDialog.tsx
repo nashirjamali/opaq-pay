@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { formatUsdc, formatUsdcExact } from "@/lib/format";
 import { MOVE_PHASE_LABEL } from "@/lib/opaq/shield";
 import { useSession } from "@/lib/session";
+import { UsdcLabel } from "./TokenMarks";
 import { CbCircle, CbIcon } from "./CbIcon";
 
 /** Confirms, runs and reports moving payments into the private balance. */
@@ -40,9 +41,9 @@ export function MoveDialog() {
           <h2 id="move-title">Move {formatUsdc(move.total)} USDC to your private balance</h2>
           <dl className="kv">
             <dt>Protocol fee ({feePct})</dt>
-            <dd className="num">{move.unswept > 0 ? `${formatUsdcExact(fee)} USDC` : "none, already in the vault"}</dd>
+            <dd className="num">{move.unswept > 0 ? <>{formatUsdcExact(fee)} <UsdcLabel size={16} /></> : "none, already in the vault"}</dd>
             <dt>You will have</dt>
-            <dd className="num">{formatUsdcExact(net)} USDC</dd>
+            <dd className="num">{formatUsdcExact(net)} <UsdcLabel size={16} /></dd>
           </dl>
           <p className="notice">
             <CbIcon name="lock" size={18} />
