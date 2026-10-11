@@ -91,6 +91,8 @@ JS workspaces:
   `NEXT_PUBLIC_OPAQ_CLUSTER=localnet`, `NEXT_PUBLIC_RPC_URL=http://localhost:8899`,
   `NEXT_PUBLIC_OPAQ_SERVER_URL=http://localhost:8788`. `RELAYER_REQUESTS_PER_MINUTE=2` makes a move fail halfway,
   to test resuming.
+- `pnpm --filter @opaq/web check:cashout` – with `dev-net` running: drives the web app's own `lib/opaq` code without a
+  browser (two payments, one moved to private, then cash out everything) and checks amounts and end state.
 - `pnpm --filter @opaq/sdk build && pnpm --filter @opaq/server start` – run the server (env: `.env.example`)
 - `RELAYER_KEYPAIR_FILE=… docker compose -f apps/server/compose.yaml up -d --build` – Postgres + server
   in Docker against devnet (port 8787; the key file stays on the host, mounted read-only). Export
@@ -132,8 +134,9 @@ JS workspaces:
 - `src/scanner.ts` – `fetchAnnouncements` (pages `getSignaturesForAddress` on the registry's event
   authority), `extractAnnouncements`, `scanForPayments` (scan key only; cursor via `until`/`before`;
   reports USDC still to sweep plus the stealth wrapper account and its public amount),
-  `getStealthTokenBalance`. Also `getCreateWrappedTokenAccountInstruction` and
-  `getWithdrawFromVaultInstruction` (owner = stealth signer for stealth accounts) in builders.
+  `getStealthTokenBalance`. Also `getCreateWrappedTokenAccountInstruction`,
+  `getWithdrawFromVaultInstruction` (owner = stealth signer for stealth accounts) and `getCashOutInstructions`
+  (creates the recipient wallet's USDC account with the relayer paying, then withdraws there) in builders.
 - `src/keys.ts` – HKDF master-seed → meta keys, wallet-signature derivation, scan-only viewing key
   (`opaqvk1…`), which is also enough to decrypt stealth CT balances.
 - `src/confidential.ts` – separate entry `@opaq/sdk/confidential` (pulls in zk-sdk WASM; the main
@@ -178,7 +181,11 @@ Next.js (App Router) on `@opaq/sdk`. UI direction: `DESIGN.md`, wireframe in `do
   chain state first so a retry resumes, and polls after each step because reads default to finalized commitment.
   The protocol fee (`vault.feeBps`) is shown before confirming and only applies to USDC not yet in the vault.
 - `/pay/[handle]` is the payer page: looks up the handle, connects a wallet, pays with `getPayToMetaAddressInstructions`.
-- Not built yet: cash out (unshield + withdraw), reports and view keys.
+- `lib/opaq/cashout.ts` + `/cashout` send everything held to one Solana address: sweep what is unswept, unshield what
+  is private, `getCashOutInstructions`, then close the emptied stealth account (best effort). Same rules as the move:
+  relayer required, stealth keys only, resumes after a failure. The page states what becomes public before sending and
+  warns when the address is the connected wallet (that links the payments to it). Whole balance only, no partial amounts.
+- Not built yet: partial cash outs, reports and view keys.
 
 ## Server (`apps/server`)
 

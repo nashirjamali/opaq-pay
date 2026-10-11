@@ -16,7 +16,7 @@ const STEPS = [
   { icon: "/home/page/step-account.svg", title: "Create your handle", body: "Sign in with a Solana wallet. Opaq derives your private keys from one signature and registers your handle." },
   { icon: "/home/page/step-deposited.svg", title: "Share your link", body: "Anyone can pay it. Each payment goes to a fresh one-time address that only you can find." },
   { icon: "/home/page/step-privacy.svg", title: "Move it into your private balance", body: "The Opaq relayer pays the network fees. Afterwards your balance is hidden on chain." },
-  { icon: "/home/page/step-withdraw.svg", title: "Cash out when you want", body: "Send USDC 1:1 to any address you choose. You see what becomes public before you confirm.", soon: true },
+  { icon: "/home/page/step-withdraw.svg", title: "Cash out when you want", body: "Send USDC 1:1 to any address you choose. You see what becomes public before you confirm." },
 ] as const;
 
 const PUBLIC = [

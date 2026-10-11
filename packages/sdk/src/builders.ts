@@ -410,4 +410,42 @@ export async function getWithdrawFromVaultInstruction(input: WithdrawFromVaultIn
   );
 }
 
+export type CashOutInput = {
+  /** Owner of the wrapper tokens: the stealth signer for a stealth account. */
+  owner: TransactionSigner;
+  vault: VaultSettings;
+  amount: bigint;
+  /** Wallet that receives the USDC. Its USDC account is created when it does not exist yet. */
+  recipient: Address;
+  /** Pays the rent of the recipient's USDC account if it has to be created: the relayer. */
+  accountPayer: TransactionSigner;
+};
+
+/**
+ * Sends `amount` of the owner's public wrapper balance out of the vault as USDC to `recipient`:
+ * creates the recipient's USDC account when missing, then `withdraw`. Shielded balance has to be
+ * unshielded first.
+ *
+ * The recipient address and the amount are public, and so is the link between this stealth
+ * account and the recipient. Cashing out to the recipient's own wallet ties the payment to it.
+ */
+export async function getCashOutInstructions(input: CashOutInput): Promise<Instruction[]> {
+  const settings = input.vault;
+  const [destination] = await findAssociatedTokenPda({
+    owner: input.recipient,
+    mint: settings.underlyingMint,
+    tokenProgram: settings.underlyingTokenProgram,
+  });
+  return [
+    getCreateAssociatedTokenIdempotentInstruction({
+      payer: input.accountPayer,
+      ata: destination,
+      owner: input.recipient,
+      mint: settings.underlyingMint,
+      tokenProgram: settings.underlyingTokenProgram,
+    }),
+    await getWithdrawFromVaultInstruction({ owner: input.owner, vault: settings, amount: input.amount, destination }),
+  ];
+}
+
 export { TOKEN_PROGRAM_ADDRESS };
