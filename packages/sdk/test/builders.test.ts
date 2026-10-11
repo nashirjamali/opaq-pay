@@ -10,6 +10,7 @@ import {
   findEventAuthorityPda,
   findOwnPayments,
   generateMetaKeys,
+  getCashOutInstructions,
   getPayToMetaAddressInstructions,
   getCreateWrappedTokenAccountInstruction,
   getRegisterHandleInstruction,
@@ -302,5 +303,57 @@ describe('targeting a deployment', () => {
     const announce = pay.instructions[2]!;
     expect(announce.programAddress).toBe(OTHER_PROGRAMS.registry);
     expect(announce.accounts?.map((a) => a.address)).toContain(await findEventAuthorityPda(OTHER_PROGRAMS.registry));
+  });
+});
+
+describe('cashing out of the vault', () => {
+  it('creates the recipient’s USDC account with the relayer paying, then withdraws there', async () => {
+    const stealthSigner = createStealthSigner(123456789n);
+    const relayer = await generateKeyPairSigner();
+    const recipient = (await generateKeyPairSigner()).address;
+    const [config] = await vault.findConfigPda();
+    const settings: VaultSettings = {
+      programAddress: vault.OPAQ_VAULT_PROGRAM_ADDRESS,
+      config,
+      underlyingMint: USDC,
+      wrappedMint: (await generateKeyPairSigner()).address,
+      vault: (await generateKeyPairSigner()).address,
+      treasury: (await generateKeyPairSigner()).address,
+      feeBps: 50,
+      underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS,
+      decimals: 6,
+    };
+
+    const [create, withdraw] = await getCashOutInstructions({
+      owner: stealthSigner,
+      vault: settings,
+      amount: 995_000n,
+      recipient,
+      accountPayer: relayer,
+    });
+    const [recipientUsdc] = await findAssociatedTokenPda({ owner: recipient, mint: USDC, tokenProgram: TOKEN_PROGRAM_ADDRESS });
+    const [stealthWrapped] = await findAssociatedTokenPda({
+      owner: stealthSigner.address,
+      mint: settings.wrappedMint,
+      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+    });
+
+    // The relayer funds the new account and nothing else; the stealth key is not asked to pay.
+    expect(create!.accounts?.[0]).toMatchObject({ address: relayer.address, role: AccountRole.WRITABLE_SIGNER });
+    expect(create!.accounts?.map((a) => a.address)).toEqual(expect.arrayContaining([recipientUsdc, recipient, USDC]));
+
+    const parsed = vault.parseWithdrawInstruction(withdraw as Parameters<typeof vault.parseWithdrawInstruction>[0]);
+    expect(parsed.accounts.owner).toMatchObject({ address: stealthSigner.address, role: AccountRole.READONLY_SIGNER });
+    expect(parsed.accounts.ownerWrapped.address).toBe(stealthWrapped);
+    expect(parsed.accounts.destination.address).toBe(recipientUsdc);
+    expect(parsed.data.amount).toBe(995_000n);
+  });
+
+  it('rejects non-positive amounts', async () => {
+    const relayer = await generateKeyPairSigner();
+    const settings = { underlyingMint: USDC, underlyingTokenProgram: TOKEN_PROGRAM_ADDRESS } as VaultSettings;
+    await expect(
+      getCashOutInstructions({ owner: createStealthSigner(1n), vault: settings, amount: 0n, recipient: relayer.address, accountPayer: relayer }),
+    ).rejects.toThrow(/greater than zero/);
   });
 });

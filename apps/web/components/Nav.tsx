@@ -12,7 +12,7 @@ const ITEMS: { href: string; label: string; icon: CbIconName; soon?: boolean }[]
   { href: "/overview", label: "Overview", icon: "dashboard" },
   { href: "/receive", label: "Receive", icon: "arrow-down" },
   { href: "/activity", label: "Activity", icon: "portfolio" },
-  { href: "/cashout", label: "Cash out", icon: "withdraw", soon: true },
+  { href: "/cashout", label: "Cash out", icon: "withdraw" },
   { href: "/reports", label: "Reports", icon: "pie-chart", soon: true },
 ];
 const SETTINGS = { href: "/settings", label: "Settings", icon: "settings" as CbIconName };
