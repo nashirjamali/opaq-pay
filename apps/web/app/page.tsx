@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const STEPS = [
   { icon: "/home/page/step-account.svg", title: "Create your handle", body: "Sign in with a Solana wallet. Opaq derives your private keys from one signature and registers your handle." },
   { icon: "/home/page/step-deposited.svg", title: "Share your link", body: "Anyone can pay it. Each payment goes to a fresh one-time address that only you can find." },
-  { icon: "/home/page/step-privacy.svg", title: "Move it into your private balance", body: "The Opaq relayer pays the network fees. Afterwards the amount is hidden on chain." },
+  { icon: "/home/page/step-privacy.svg", title: "Move it into your private balance", body: "The Opaq relayer pays the network fees. Afterwards your balance is hidden on chain." },
   { icon: "/home/page/step-withdraw.svg", title: "Cash out when you want", body: "Send USDC 1:1 to any address you choose. You see what becomes public before you confirm.", soon: true },
 ] as const;
 
@@ -120,7 +120,7 @@ export default function HomePage() {
         <section className="hp-sec" id="public" aria-labelledby="pub-h">
           <div className="hp-wrap">
             <div className="hp-head">
-              <p className="hp-eyebrow">Honest by design</p>
+              <p className="hp-eyebrow">Privacy limits</p>
               <h2 id="pub-h">What anyone can see, and what stays yours</h2>
               <p>Private does not mean untraceable. Opaq is not a mixer: everything stays traceable to whoever holds your viewing key.</p>
             </div>
@@ -201,7 +201,7 @@ export default function HomePage() {
             <img className="for-light" src="/home/page/icon-info.svg" alt="" /><img className="for-dark" src="/home/page/icon-info-dark.svg" alt="" />
             <div>
               <h2>Opaq Pay runs on Solana devnet</h2>
-              <p>Nothing here moves real funds yet. Try it, break it, tell us what you find.</p>
+              <p>Nothing here moves real funds yet.</p>
             </div>
           </aside>
 
@@ -211,7 +211,7 @@ export default function HomePage() {
             </div>
             <div>
               <h2 id="cta-h">Create your payment link</h2>
-              <p>Sign in with a Solana wallet, pick a handle, and share the link. It takes about a minute on devnet.</p>
+              <p>Sign in with a Solana wallet and pick a handle. Then share your link.</p>
               <Link href="/overview?signin=1" className="btn hp-btn-on">Create account</Link>
             </div>
             <div className="hp-pay" aria-hidden="true" inert>
