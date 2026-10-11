@@ -130,6 +130,9 @@ export default function HomePage() {
                 <ul className="hp-checks">{PUBLIC.map((t) => <li key={t}><img className="for-light" src="/home/page/icon-success.svg" alt="" /><img className="for-dark" src="/home/page/icon-success-dark.svg" alt="" />{t}</li>)}</ul>
               </div>
               <div className="hp-card hp-card-dark">
+                <div className="hp-wash">
+                  <div className="wash-flip"><img className="wash-priv for-light" src="/home/page/pattern-private.svg" alt="" /><img className="wash-priv for-dark" src="/home/page/pattern-private-dark.svg" alt="" /></div>
+                </div>
                 <h3 className="hp-card-h"><span className="hp-chip"><img className="for-light" src="/home/page/icon-lock.svg" alt="" /><img className="for-dark" src="/home/page/icon-lock-dark.svg" alt="" /></span>Private to you</h3>
                 <ul className="hp-checks">{PRIVATE.map((t) => <li key={t}><img className="for-light" src="/home/page/icon-success-lime.svg" alt="" /><img className="for-dark" src="/home/page/icon-success-lime-dark.svg" alt="" />{t}</li>)}</ul>
               </div>
@@ -161,7 +164,7 @@ export default function HomePage() {
               <article className="hp-card hp-road">
                 <div className="hp-road-art" aria-hidden="true">
                   <div className="hp-acct">
-                    <div><span><img src="/home/page/icon-company.svg" alt="" />Accountant view</span><span className="hp-tag">Read-only</span></div>
+                    <div><span><img src="/home/page/icon-company.svg" alt="" />Accountant view</span><span className="hp-lime-tag">Read-only</span></div>
                     <div><span className="muted">Range</span><b>Oct 1 to Oct 31</b></div>
                     <div><span className="muted">Payments</span><b>Received and cashed out</b></div>
                   </div>
@@ -192,9 +195,15 @@ export default function HomePage() {
         </section>
 
         <div className="hp-wrap">
-          <aside className="hp-note" aria-label="Network">
+          <aside className="hp-slab hp-notice">
+            <div className="hp-wash hp-wash-notice">
+              <div className="wash-flip"><img className="wash-notice for-light" src="/home/page/pattern-notice.svg" alt="" /><img className="wash-notice for-dark" src="/home/page/pattern-notice-dark.svg" alt="" /></div>
+            </div>
             <img className="for-light" src="/home/page/icon-info.svg" alt="" /><img className="for-dark" src="/home/page/icon-info-dark.svg" alt="" />
-            <p><strong>Opaq Pay runs on Solana devnet.</strong> Nothing here moves real funds yet. Try it, break it, tell us what you find.</p>
+            <div>
+              <h2>Opaq Pay runs on Solana devnet</h2>
+              <p>Nothing here moves real funds yet. Try it, break it, tell us what you find.</p>
+            </div>
           </aside>
 
           <section className="hp-final" aria-labelledby="cta-h">
@@ -220,6 +229,9 @@ export default function HomePage() {
       <footer className="hp-foot-outer">
         <div className="hp-wrap">
         <div className="hp-slab hp-foot">
+          <div className="hp-wash hp-wash-foot">
+            <div className="wash-flip"><img className="wash-cta for-light" src="/home/page/pattern-footer.svg" alt="" /><img className="wash-cta for-dark" src="/home/page/pattern-footer-dark.svg" alt="" /></div>
+          </div>
           <div className="hp-foot-top">
             <div className="hp-foot-brand">
               <Logo full />
@@ -243,7 +255,7 @@ export default function HomePage() {
           </div>
           <div className="hp-foot-bot">
             <span>© 2026 Opaq Pay</span>
-            <span className="hp-live">Running on Solana devnet</span>
+            <span className="hp-live"><img src="/home/page/devnet-dot.svg" alt="" />Running on Solana devnet</span>
             <span className="hp-foot-note">Devnet demo. Terms and a Privacy Policy will come before real funds.</span>
             <a href="#top" className="hp-top">Back to top <img className="for-light" src="/home/page/icon-arrow-up.svg" alt="" /><img className="for-dark" src="/home/page/icon-arrow-up-dark.svg" alt="" /></a>
           </div>

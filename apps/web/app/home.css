@@ -151,7 +151,7 @@
 .hp-card-dark { background: var(--hero-bg); border-color: transparent; color: #fff; }
 .hp-card-dark .hp-card-h, .hp-card-dark .hp-checks { color: #fff; }
 .hp-card-h { display: flex; align-items: center; gap: 12px; font-size: 24px; line-height: 1.5; font-weight: 500; color: var(--strong); letter-spacing: -0.01em; margin-bottom: 20px; position: relative; }
-.hp-chip { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--strong); flex: none; }
+.hp-chip { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: #daf727; flex: none; }
 .hp-chip-ico { width: 20px; height: 20px; overflow: hidden; }
 .hp-chip-ico img { display: block; max-width: none; transform: scale(0.833333); transform-origin: top left; }
 .hp-chip > img { display: block; max-width: none; flex: none; }
@@ -509,19 +509,3 @@ img.for-dark { display: none; }
 .hp-foot-note { flex: 1 1 280px; text-align: right; }
 @media (max-width: 1099px) { .hp-art-col { width: auto; } }
 @media (max-width: 860px) { .hp-foot-note { flex-basis: 100%; text-align: left; order: 5; } }
-
-/* P1: lime is reserved for the shield and the primary action. Chips and checks use the neutral system instead. */
-.hp-chip img { filter: invert(1); }
-:root[data-theme="dark"] .hp-chip { background: #f4f4f6; }
-:root[data-theme="dark"] .hp-chip img { filter: none; }
-.hp-card-dark .hp-chip, :root[data-theme="dark"] .hp-card-dark .hp-chip { background: #fff; }
-.hp-card-dark .hp-chip img, :root[data-theme="dark"] .hp-card-dark .hp-chip img { filter: none; }
-.hp-card-dark .hp-checks img { filter: brightness(0) invert(1); }
-.art-lock { background: rgba(255, 255, 255, 0.16); color: #fff; }
-.hp-note { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 64px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 14px; }
-.hp-note img { display: block; flex: none; max-width: none; margin-top: 2px; }
-.hp-note p { margin: 0; }
-.hp-note strong { color: var(--strong); font-weight: 500; }
-.hp-note img.for-dark { display: none; }
-:root[data-theme="dark"] .hp-note img.for-light { display: none; }
-:root[data-theme="dark"] .hp-note img.for-dark { display: block; }
