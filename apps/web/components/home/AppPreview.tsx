@@ -22,7 +22,7 @@ const DAYS = ["6d", "5d", "4d", "3d", "2d", "1d", "Today"];
 /** The same Overview as the phone shows it: menu button instead of a sidebar, one column. Used below 700px, where the desktop board would be unreadably small. */
 function PhonePreview() {
   return (
-    <div className="ph" aria-hidden="true">
+    <div className="phn" aria-hidden="true">
       <div className="ph-head">
         <span className="ph-menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2.5 5H17.5M2.5 10H17.5M2.5 15H17.5" /></svg></span>
         <Logo />

@@ -149,7 +149,7 @@
 .hp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .hp-card { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 32px 32px 36px; }
 .hp-card-dark { background: var(--hero-bg); border-color: transparent; color: #fff; }
-.hp-card-dark .hp-card-h { color: #fff; }
+.hp-card-dark .hp-card-h, .hp-card-dark .hp-checks { color: #fff; }
 .hp-card-h { display: flex; align-items: center; gap: 12px; font-size: 24px; line-height: 1.5; font-weight: 500; color: var(--strong); letter-spacing: -0.01em; margin-bottom: 20px; position: relative; }
 .hp-chip { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: #daf727; flex: none; }
 .hp-chip-ico { width: 20px; height: 20px; overflow: hidden; }
@@ -448,11 +448,11 @@ img.for-dark { display: none; }
 :root[data-theme="dark"] .pv .logo-dark { display: inline; }
 
 /* Phone preview: shown instead of the scaled desktop board on small screens */
-.ph { display: none; }
+.phn { display: none; }
 @media (max-width: 700px) {
   .pv { display: none; }
-  .ph { display: grid; gap: 14px; align-content: start; height: 560px; overflow: hidden; padding: 0 16px 16px; background: #fff; border: 1px solid #e3e3e8; border-radius: 16px; color: #131316; }
-  :root[data-theme="dark"] .ph { background: #131316; border-color: #2f2f37; color: #f4f4f6; }
+  .phn { display: grid; gap: 14px; align-content: start; height: 560px; overflow: hidden; padding: 0 16px 16px; background: #fff; border: 1px solid #e3e3e8; border-radius: 16px; color: #131316; }
+  :root[data-theme="dark"] .phn { background: #131316; border-color: #2f2f37; color: #f4f4f6; }
   .ph-head { display: flex; align-items: center; gap: 12px; margin: 0 -16px; padding: 10px 16px; border-bottom: 1px solid #e3e3e8; }
   :root[data-theme="dark"] .ph-head { border-color: #2f2f37; }
   .ph-head .logo { height: 34px; }
