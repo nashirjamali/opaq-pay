@@ -8,7 +8,8 @@
     "build": "pnpm --filter @opaq/sdk build && next build",
     "start": "next start",
     "typecheck": "pnpm --filter @opaq/sdk build && next typegen && tsc --noEmit",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check:cashout": "pnpm --filter @opaq/sdk build && tsx scripts/cashout-check.ts"
   },
   "dependencies": {
     "@opaq/sdk": "workspace:^",
@@ -28,6 +29,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "tsx": "^4.20.0",
     "typescript": "^5.9.3"
   }
 }

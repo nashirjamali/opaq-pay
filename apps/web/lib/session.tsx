@@ -2,7 +2,9 @@
 
 import type { DetectedPayment, MetaKeys } from "@opaq/sdk";
 import type { Wallet, WalletAccount } from "@wallet-standard/base";
+import { address, isAddress } from "@solana/kit";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { cashOutPayments, type CashOutProgress } from "./opaq/cashout";
 import { relayer } from "./opaq/env";
 import { loadPayments } from "./opaq/payments";
 import { movePaymentsToPrivate, type MoveProgress } from "./opaq/shield";
@@ -54,6 +56,29 @@ export interface MoveInfo {
   start: () => void;
 }
 
+export type CashOutState =
+  | { status: "idle" }
+  | { status: "running"; progress: CashOutProgress | null }
+  | { status: "done"; amount: number; recipient: string }
+  | { status: "error"; message: string };
+
+/** What can be cashed out, and the run that does it. A cash out always empties everything held. */
+export interface CashOutInfo {
+  /** How many payments still hold funds. */
+  count: number;
+  /** Everything held, private or not, in whole units. */
+  total: number;
+  /** Share of `total` the protocol fee still applies to (USDC not yet in the vault). */
+  unswept: number;
+  feeBps: number;
+  /** False when no relayer is configured: nothing can be cashed out. */
+  available: boolean;
+  state: CashOutState;
+  /** `recipient` is a Solana wallet address; anything else is ignored. */
+  start: (recipient: string) => void;
+  reset: () => void;
+}
+
 interface Session {
   isDemo: boolean;
   /** The signed-in wallet's address, or null in the demo. */
@@ -66,6 +91,7 @@ interface Session {
   dataError: string;
   refresh: () => void;
   move: MoveInfo;
+  cashOut: CashOutInfo;
   revealed: boolean;
   setRevealed: (v: boolean) => void;
   authOpen: boolean;
@@ -100,6 +126,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [feeBps, setFeeBps] = useState(0);
   const [moveState, setMoveState] = useState<MoveState>({ status: "idle" });
   const [moveOpen, setMoveOpen] = useState(false);
+  const [held, setHeld] = useState<DetectedPayment[]>([]);
+  const [cashOutState, setCashOutState] = useState<CashOutState>({ status: "idle" });
   const isDemo = account === null;
 
   const openAuth = useCallback((action?: ActionKey) => {
@@ -122,7 +150,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setPayments([]);
     setBalance(0);
     setMovable([]);
+    setHeld([]);
     setMoveState({ status: "idle" });
+    setCashOutState({ status: "idle" });
     setDataState("loading");
     setRevealed(false);
     setAuthOpen(false);
@@ -139,6 +169,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const requestId = useRef(0);
   const moveRef = useRef<MoveState["status"]>("idle");
   moveRef.current = moveState.status;
+  const cashOutRef = useRef<CashOutState["status"]>("idle");
+  cashOutRef.current = cashOutState.status;
   const refresh = useCallback(() => {
     if (!account) return;
     const id = ++requestId.current;
@@ -150,6 +182,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setMovable(result.movable);
         setMovableTotal(result.movableTotal);
         setUnsweptTotal(result.unsweptTotal);
+        setHeld(result.held);
         setFeeBps(result.feeBps);
         setDataError("");
         setDataState("ready");
@@ -165,7 +198,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!account) return;
     refresh();
     const timer = setInterval(() => {
-      if (!document.hidden && moveRef.current !== "running") refresh();
+      if (!document.hidden && moveRef.current !== "running" && cashOutRef.current !== "running") refresh();
     }, POLL_MS);
     return () => {
       clearInterval(timer);
@@ -174,7 +207,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [account, refresh]);
 
   const startMove = useCallback(() => {
-    if (!account || movable.length === 0 || moveRef.current === "running") return;
+    if (!account || movable.length === 0 || moveRef.current === "running" || cashOutRef.current === "running") return;
     setMoveState({ status: "running", progress: null });
     movePaymentsToPrivate({
       keys: account.keys,
@@ -210,6 +243,45 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [movable, movableTotal, unsweptTotal, feeBps, moveState, moveOpen, startMove],
   );
 
+  const startCashOut = useCallback(
+    (recipient: string) => {
+      if (!account || held.length === 0 || !isAddress(recipient)) return;
+      if (cashOutRef.current === "running" || moveRef.current === "running") return;
+      setCashOutState({ status: "running", progress: null });
+      cashOutPayments({
+        keys: account.keys,
+        payments: held,
+        recipient: address(recipient),
+        onProgress: (progress) => setCashOutState({ status: "running", progress }),
+      })
+        .then((amount) => {
+          setCashOutState({ status: "done", amount, recipient });
+          refresh();
+        })
+        .catch((error: unknown) => {
+          setCashOutState({ status: "error", message: explainError(error) });
+          refresh();
+        });
+    },
+    [account, held, refresh],
+  );
+
+  const cashOut = useMemo<CashOutInfo>(
+    () => ({
+      count: held.length,
+      total: balance + movableTotal,
+      unswept: unsweptTotal,
+      feeBps,
+      available: relayer !== null,
+      state: cashOutState,
+      start: startCashOut,
+      reset: () => {
+        if (cashOutRef.current !== "running") setCashOutState({ status: "idle" });
+      },
+    }),
+    [held, balance, movableTotal, unsweptTotal, feeBps, cashOutState, startCashOut],
+  );
+
   const retry = useCallback(() => {
     setDataState("loading");
     refresh();
@@ -226,6 +298,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       dataError,
       refresh: retry,
       move,
+      cashOut,
       revealed,
       setRevealed,
       authOpen,
@@ -238,7 +311,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       signOut,
       account,
     }),
-    [isDemo, account, balance, payments, dataState, dataError, retry, move, revealed, authOpen, authAction, authNonce, openAuth, closeAuth, requireAccount, signIn, signOut],
+    [isDemo, account, balance, payments, dataState, dataError, retry, move, cashOut, revealed, authOpen, authAction, authNonce, openAuth, closeAuth, requireAccount, signIn, signOut],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

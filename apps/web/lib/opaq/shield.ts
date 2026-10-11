@@ -28,7 +28,7 @@ export const MOVE_PHASE_LABEL: Record<MovePhase, string> = {
 };
 
 /** Polls until the chain shows a step's result. Reads default to finalized commitment, so a fresh write can lag. */
-async function waitFor<T>(read: () => Promise<T>, done: (value: T) => boolean, what: string, timeoutMs = 60_000): Promise<T> {
+export async function waitFor<T>(read: () => Promise<T>, done: (value: T) => boolean, what: string, timeoutMs = 60_000): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     const value = await read();

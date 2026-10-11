@@ -15,6 +15,8 @@ export interface LoadedPayments {
   movableTotal: number;
   /** The part of `movableTotal` still at the stealth address, which the protocol fee applies to. */
   unsweptTotal: number;
+  /** Every payment that still holds funds, private or not: what a cash out empties. */
+  held: DetectedPayment[];
   /** Protocol fee in basis points, taken when USDC moves into the vault. */
   feeBps: number;
 }
@@ -34,6 +36,7 @@ export async function loadPayments(keys: MetaKeys): Promise<LoadedPayments> {
   const unit = 10 ** vault.decimals;
   const payments: Payment[] = [];
   const movable: DetectedPayment[] = [];
+  const held: DetectedPayment[] = [];
   let balance = 0;
   let movableTotal = 0;
   let unsweptTotal = 0;
@@ -45,6 +48,7 @@ export async function loadPayments(keys: MetaKeys): Promise<LoadedPayments> {
 
     if (p.amount > 0n) {
       const amount = Number(p.amount) / unit;
+      held.push(p);
       movable.push(p);
       movableTotal += amount;
       unsweptTotal += amount;
@@ -67,10 +71,12 @@ export async function loadPayments(keys: MetaKeys): Promise<LoadedPayments> {
       if (bal.total === 0n) {
         payments.push({ ...row, amount: 0, amountKnown: false, status: "out" });
       } else if (bal.confidential && bal.publicAmount === 0n) {
+        held.push(p);
         balance += amount;
         payments.push({ ...row, amount, amountKnown: true, status: "private" });
       } else {
         // Swept into the vault but still a public balance: it needs shielding.
+        held.push(p);
         movable.push(p);
         movableTotal += amount;
         payments.push({ ...row, amount, amountKnown: true, status: "waiting" });
@@ -81,5 +87,5 @@ export async function loadPayments(keys: MetaKeys): Promise<LoadedPayments> {
     }
   }
 
-  return { payments: payments.reverse(), balance, movable, movableTotal, unsweptTotal, feeBps: vault.feeBps }; // the SDK returns oldest first
+  return { payments: payments.reverse(), balance, movable, movableTotal, unsweptTotal, held, feeBps: vault.feeBps }; // the SDK returns oldest first
 }
