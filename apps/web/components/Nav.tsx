@@ -8,12 +8,12 @@ import { useNavDrawer } from "@/lib/navDrawer";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
-const ITEMS: { href: string; label: string; icon: CbIconName }[] = [
+const ITEMS: { href: string; label: string; icon: CbIconName; soon?: boolean }[] = [
   { href: "/overview", label: "Overview", icon: "dashboard" },
   { href: "/receive", label: "Receive", icon: "arrow-down" },
   { href: "/activity", label: "Activity", icon: "portfolio" },
-  { href: "/cashout", label: "Cash out", icon: "withdraw" },
-  { href: "/reports", label: "Reports", icon: "pie-chart" },
+  { href: "/cashout", label: "Cash out", icon: "withdraw", soon: true },
+  { href: "/reports", label: "Reports", icon: "pie-chart", soon: true },
 ];
 const SETTINGS = { href: "/settings", label: "Settings", icon: "settings" as CbIconName };
 
@@ -37,10 +37,11 @@ export function Nav() {
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M3 3L17 17M17 3L3 17" /></svg>
         </button>
       </div>
-      {ITEMS.map(({ href, label, icon }) => (
+      {ITEMS.map(({ href, label, icon, soon }) => (
         <Link key={href} href={href} aria-current={path === href ? "page" : undefined}>
           <CbIcon name={icon} />
           <span>{label}</span>
+          {soon && <span className="nav-soon">Soon</span>}
         </Link>
       ))}
       <aside className="nav-note" aria-label="What is public">
