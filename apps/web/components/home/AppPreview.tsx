@@ -1,159 +1,21 @@
-import { Logo } from "@/components/Logo";
-
-const ROWS = [
-  { who: "From 7xK2…9fQa", when: "Today, 14:02", chip: "wait", label: "Not yet private", amt: "+120.00", out: false },
-  { who: "From Fh3n…c2Ld", when: "Today, 09:41", chip: "priv", label: "Private", amt: "+450.00", out: false },
-  { who: "From Bq7r…m8Ye", when: "Yesterday, 17:20", chip: "priv", label: "Private", amt: "+75.50", out: false },
-  { who: "Cash out", when: "4 days ago to 4tNb…Wq7e", chip: "out", label: "Cashed out", amt: "-280.00", out: true },
-] as const;
-
-const BARS = [
-  { c: "hi", h: 81.481, t: 6.67, l: 6.14 },
-  { c: "lo", h: 2.963, t: 85.19, l: 39.15 },
-  { c: "hi", h: 65.977, t: 22.17, l: 72.17 },
-  { c: "lo", h: 2.963, t: 85.19, l: 105.18 },
-  { c: "lo", h: 2.963, t: 85.19, l: 138.2 },
-  { c: "hi", h: 5.926, t: 82.22, l: 171.22 },
-  { c: "today", h: 37.607, t: 50.54, l: 204.23 },
-] as const;
-
-const DAYS = ["6d", "5d", "4d", "3d", "2d", "1d", "Today"];
-
-/** The same Overview as the phone shows it: menu button instead of a sidebar, one column. Used below 700px, where the desktop board would be unreadably small. */
-function PhonePreview() {
-  return (
-    <div className="phn" aria-hidden="true">
-      <div className="ph-head">
-        <span className="ph-menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2.5 5H17.5M2.5 10H17.5M2.5 15H17.5" /></svg></span>
-        <Logo />
-        <span className="ph-grow" />
-        <span className="ph-acct"><i>Y</i>@yourhandle</span>
-      </div>
-      <p className="ph-lead">Your private balance and what came in recently.</p>
-      <div className="ph-bal">
-        <span className="ph-top">Private balance</span>
-        <div className="ph-amt"><b>2,480</b><span>.50</span><em>USDC</em></div>
-        <p>$120.00 USDC arrived and is not in your private balance yet.</p>
-        <div className="ph-acts"><span className="ph-lime">Move to private balance</span><span>Cash out</span><span>Copy payment link</span></div>
-      </div>
-      <div className="ph-link">
-        <b>Your payment link</b>
-        <span className="ph-box">opaq.pay/pay/yourhandle</span>
-        <p>Anyone with this link can pay you. They see your handle, never your wallet or balance.</p>
-      </div>
-    </div>
-  );
-}
+/**
+ * Screenshots of the real demo Overview (signed out, sample data), not a redrawn copy, so the preview cannot drift from the app.
+ * Regenerate them when the Overview changes: desktop at 1512x982, phone at 390x560, both themes. The demo banner is hidden and
+ * the link box shows opaq.pay instead of localhost in the capture.
+ */
+const ALT = "The Opaq Pay Overview screen with sample data: private balance, payment link, recent activity and a weekly chart.";
 
 export function AppPreview() {
   return (
-    <>
-    <PhonePreview />
-    <div className="pv" aria-hidden="true">
-      <div className="pv-frame">
-        <div className="pv-board">
-          <aside className="pv-side">
-            <div className="pv-brand"><Logo full /></div>
-            <img className="pv-rule" src="/home/page/product-line.svg" alt="" />
-            <nav className="pv-nav">
-              <div className="pv-items">
-                <span className="pv-item pv-on"><img src="/home/page/nav-dashboard.svg" alt="" />Overview</span>
-                <span className="pv-item"><img src="/home/page/nav-receive.svg" alt="" />Receive</span>
-                <span className="pv-item"><img src="/home/page/nav-activity.svg" alt="" />Activity</span>
-                <span className="pv-item"><img src="/home/page/nav-cashout.svg" alt="" />Cash out</span>
-                <span className="pv-item"><img src="/home/page/nav-reports.svg" alt="" />Reports</span>
-              </div>
-              <div className="pv-bottom">
-                <div className="pv-note">
-                  <b>What is public</b>
-                  <span>Anyone can see who paid you and how much. They can&apos;t see which wallet is yours or what your balance is.</span>
-                </div>
-                <span className="pv-set"><img src="/home/page/nav-settings.svg" alt="" />Settings</span>
-                <span className="pv-set pv-theme">
-                  <svg className="pv-theme-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.5 9.2A6 6 0 116.8 2.5a4.8 4.8 0 006.7 6.7z" /></svg>
-                  <svg className="pv-theme-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2.8" /><path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M12.6 3.4l-1 1M4.4 11.6l-1 1" /></svg>
-                  <span className="pv-theme-moon">Dark mode</span><span className="pv-theme-sun">Light mode</span>
-                </span>
-              </div>
-            </nav>
-          </aside>
-          <div className="pv-main">
-            <header className="pv-head">
-              <b>Overview</b>
-              <span className="pv-grow" />
-              <span className="pv-pill"><img src="/home/page/solana.svg" alt="" />Solana Devnet</span>
-              <span className="pv-addr">7xK2…9fQa</span>
-              <span className="pv-acct"><i>Y</i>@yourhandle</span>
-            </header>
-            <div className="pv-body">
-              <p className="pv-lead">Your private balance and what came in recently.</p>
-              <div className="pv-hero-row">
-                <section className="pv-bal">
-                  <div className="pv-pat">
-                    <div className="wash-flip"><img className="wash-bal" src="/home/page/pattern-balance.svg" alt="" /></div>
-                  </div>
-                  <div className="pv-bal-top">
-                    <img src="/home/page/icon-lock-sm.svg" alt="" />
-                    <span>Private balance</span>
-                    <span className="pv-grow" />
-                    <span className="pv-hide"><img src="/home/page/icon-eye-off.svg" alt="" />Hide amounts</span>
-                  </div>
-                  <div className="pv-amt">
-                    <b>2,480</b>
-                    <span>.50</span>
-                    <span className="pv-usdc"><img src="/home/page/usdc.svg" alt="" />USDC</span>
-                  </div>
-                  <p>$120.00 USDC arrived and is not in your private balance yet.</p>
-                  <div className="pv-acts">
-                    <span className="pv-lime"><img src="/home/page/icon-lock-btn.svg" alt="" />Move to private balance</span>
-                    <span><img src="/home/page/icon-arrow-up-sm.svg" alt="" />Cash out</span>
-                    <span>Copy payment link</span>
-                  </div>
-                </section>
-                <section className="pv-link">
-                  <div className="pv-link-h"><span><img src="/home/page/icon-price.svg" alt="" /></span>Your payment link</div>
-                  <div className="pv-linkbox">opaq.pay/pay/yourhandle</div>
-                  <p>Anyone with this link can pay you. They see your handle, never your wallet or balance.</p>
-                  <span className="pv-ask">Ask for a specific amount</span>
-                </section>
-              </div>
-              <div className="pv-stats">
-                <div>
-                  <span><img src="/home/page/icon-lock-stat.svg" alt="" />PRIVATE PAYMENTS</span>
-                  <b>4</b>
-                </div>
-                <div>
-                  <span><img src="/home/page/icon-switch.svg" alt="" />WAITING TO MOVE</span>
-                  <b>1</b>
-                </div>
-              </div>
-              <div className="pv-low">
-                <div className="pv-act">
-                  <div className="pv-act-h"><b>Recent activity</b><span className="pv-grow" /><span>See all activity</span></div>
-                  {ROWS.map((r) => (
-                    <div className="pv-row" key={r.who}>
-                      <span className={r.out ? "pv-tile pv-tile-out" : "pv-tile"}><img src={r.out ? "/home/page/icon-out.svg" : "/home/page/icon-in.svg"} alt="" /></span>
-                      <span className="pv-who"><b>{r.who}</b><small>{r.when}</small></span>
-                      <span className={`pv-chip pv-chip-${r.chip}`}>{r.label}</span>
-                      <span className="pv-row-amt">{r.amt}</span>
-                    </div>
-                  ))}
-                </div>
-                <figure className="pv-chart">
-                  <figcaption>Received in the last 7 days</figcaption>
-                  <div className="pv-total"><b>1,880.50</b><span>USDC</span></div>
-                  <div className="pv-plot">
-                    <i className="g0" /><i className="g1" /><i className="g2" /><i className="g3" /><i className="g4" />
-                    {BARS.map((b) => <span key={b.l} className={b.c} style={{ height: b.h, top: b.t, left: b.l }} />)}
-                  </div>
-                  <div className="pv-days">{DAYS.map((d) => <span key={d}>{d}</span>)}</div>
-                </figure>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="pv-shot">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="d l" src="/home/preview/overview-light.png" width={1512} height={982} alt={ALT} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="d k" src="/home/preview/overview-dark.png" width={1512} height={982} alt={ALT} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="p l" src="/home/preview/phone-light.png" width={390} height={560} alt={ALT} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="p k" src="/home/preview/phone-dark.png" width={390} height={560} alt={ALT} />
     </div>
-    </>
   );
 }
