@@ -123,8 +123,8 @@ JS workspaces:
     `deposit` signed by the stealth signer, then close the stealth USDC ATA with rent to
     `rentRecipient`. Passing `destination` (e.g. a wallet-owned account) links the payment to it.
 - `src/config.ts` – `OpaqConfig`: `DEVNET_PROGRAMS` / `LOCALNET_PROGRAMS`, `configFromEnv` (see
-  `.env.example`) and the chain feature flag `OPAQ_ENABLED_CHAINS` (MVP: `solana` only; `base`/`arbitrum`
-  are rejected until CCTP lands). Builders take an optional `programs`; the default is the local build's
+  `.env.example`) and the chain feature flag `OPAQ_ENABLED_CHAINS` (default `solana`; `arc` can be added, see
+  `src/cctp.ts`; `base`/`arbitrum` are rejected until a run proves them). Builders take an optional `programs`; the default is the local build's
   IDs. `fetchVaultSettings` returns `programAddress`, which the sweep/withdraw builders reuse.
 - `src/scanner.ts` – `fetchAnnouncements` (pages `getSignaturesForAddress` on the registry's event
   authority), `extractAnnouncements`, `scanForPayments` (scan key only; cursor via `until`/`before`;
@@ -146,6 +146,15 @@ JS workspaces:
 - `src/admin.ts` – `getInitVaultInstruction` (upgrade authority only), propose/accept/cancel admin.
 - `src/disclosure.ts` (in `@opaq/sdk/confidential`) – `createDisclosure` (per-payment keys for a
   time range instead of the scan seed), `verifyDisclosure` (checks entries against chain data).
+- `src/cctp.ts` – payments that start on an EVM chain via Circle CCTP V2 (ADR 0003). No EVM dependency: it
+  gives the app the contract address, ABI fragments and `depositForBurn` arguments.
+  `getCctpSourceChain(config, chain)` (enforces the chain flag; `CCTP_DEVNET_SOURCES` has Arc Testnet and Base
+  Sepolia), `getPrepareCctpPaymentInstructions` (one-time address + its USDC account, which must exist before
+  the mint; returns `mintRecipient`), `fetchCctpTransferQuote`, `getCctpDepositForBurnArgs`,
+  `fetchCctpAttestation` / `waitForCctpAttestation`, `decodeCctpBurnMessage`,
+  `getCctpReceiveMessageInstruction` (hand-built from Circle's IDL; nearly fills a transaction, send it
+  alone), `getCctpAnnounceInstruction` (relayer announces for the EVM payer). The attestation API is
+  untrusted: check the decoded `mintRecipient` before paying to deliver a message.
 - `src/generated/{registry,vault}` – Codama clients, exported as `registry` and `vault`.
 
 ## Web app (`apps/web`)
@@ -202,6 +211,13 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
   current deployment (handle `opaq_test`, faucet-funded relayer `7RW3…2ztw`).
   With `OPAQ_SERVER_URL=http://localhost:8787` it uses a running server instead of a local relayer
   key (indexer scan + `POST /v1/relay`); passed that way too on 2026-10-09.
+- `tests/scripts/cctp-proof.ts` – cross-chain payment with the SDK's CCTP helpers: burn USDC on a testnet EVM
+  chain (`OPAQ_CCTP_SOURCE`, default `arc`, where gas is paid in USDC) → attestation → relayer mints into the
+  stealth USDC account → relayer announces → scan → sweep. Same `OPAQ_SMOKE_DIR`; the payer key comes from
+  `OPAQ_EVM_KEYFILE`. Resumes a burn that was not minted yet. Passed 2026-10-10 and 2026-10-11 from Arc Testnet
+  (attested in 4 s); `base` is wired but has never been run. It uses a local relayer key: the server's relay
+  policy does not allow `receive_message` or a relayer-signed `announce` yet. Those runs funded the relayer
+  from the recipient wallet (faucet was down), so they prove the route, not unlinkability.
 - The public devnet RPC returns 429 on proof-heavy plans; the scripts back off and treat
   "already processed" after a retry as success.
 
@@ -242,10 +258,12 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
 
 - ADR 0001: private balances = Token-2022 CT on stealth-owned wrapper accounts; no consolidation in the MVP.
 - ADR 0002: `apps/server` indexer (scalable scanning) and one shared, policy-checked relayer.
+- ADR 0003 (proposed): cross-chain payments = CCTP V2 burn → mint into the stealth USDC account; the relayer
+  creates the account, delivers the message and announces.
 
 ## Open decisions
 
-- First EVM chain: Base or Arbitrum.
+- First EVM chain: Base or Arbitrum (Arc Testnet is only the proof chain; neither has been run yet).
 - Protocol fee: 0.5% or 1%.
 - Embedded wallet provider (Privy, Para, or Web3Auth).
 
