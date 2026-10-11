@@ -10,7 +10,7 @@ import { getSolBalance, MIN_SOL_LAMPORTS } from "@/lib/opaq/chain";
 import { config, WALLET_CHAIN } from "@/lib/opaq/env";
 import { ACTION_LABEL, useSession } from "@/lib/session";
 import { explainError, lowSolMessage } from "@/lib/wallet/errors";
-import { connectWallet, createWalletSigner } from "@/lib/wallet/standard";
+import { connectWallet, createWalletSigner, rememberWallet } from "@/lib/wallet/standard";
 import { useWallets } from "@/lib/wallet/useWallets";
 import { CbCircle, CbIcon } from "./CbIcon";
 import { GlyphGoogle, Icon } from "./Icon";
@@ -61,6 +61,7 @@ export function AuthDialog() {
     try {
       setStep("connecting");
       const walletAccount = await connectWallet(wallet);
+      rememberWallet(wallet.name);
       if (!live()) return;
       setStep("signing");
       const keys = await deriveKeys(wallet, walletAccount);

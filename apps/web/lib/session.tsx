@@ -5,7 +5,9 @@ import type { Wallet, WalletAccount } from "@wallet-standard/base";
 import { address, isAddress } from "@solana/kit";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cashOutPayments, type CashOutProgress } from "./opaq/cashout";
+import { checkHandle } from "./opaq/account";
 import { relayer } from "./opaq/env";
+import { clearSession, loadSession, saveSession } from "./opaq/persist";
 import { loadPayments } from "./opaq/payments";
 import { movePaymentsToPrivate, type MoveProgress } from "./opaq/shield";
 import { explainError } from "./wallet/errors";
@@ -27,8 +29,9 @@ export interface Account {
   address: string;
   handle: string;
   keys: MetaKeys;
-  wallet: Wallet;
-  walletAccount: WalletAccount;
+  /** Absent when the session was restored after a reload: nothing after sign-in needs the wallet. */
+  wallet?: Wallet;
+  walletAccount?: WalletAccount;
 }
 
 export type DataState = "ready" | "loading" | "error";
@@ -156,13 +159,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setDataState("loading");
     setRevealed(false);
     setAuthOpen(false);
+    saveSession({ address: next.address, handle: next.handle, keys: next.keys });
   }, []);
 
   const signOut = useCallback(() => {
+    clearSession();
     setAccount(null);
     setRevealed(true);
     setDataState("ready");
   }, []);
+
+  // After a reload, pick the session back up from this tab's storage, then confirm on chain that the
+  // handle still points at these keys. If it does not, drop the session and fall back to the demo.
+  useEffect(() => {
+    const saved = loadSession();
+    if (!saved) return;
+    signIn(saved);
+    checkHandle(saved.handle, saved.keys)
+      .then((check) => {
+        if (check === "mine") return;
+        clearSession();
+        setAccount((current) => (current?.address === saved.address ? null : current));
+      })
+      .catch(() => {
+        /* offline or rate limited: keep the session, the scan reports the error */
+      });
+  }, [signIn]);
 
   // Scan for payments on sign-in, then every POLL_MS while the tab is visible. A late answer for a
   // previous account (or a previous request) is dropped.
