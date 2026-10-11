@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { GlyphMoon, GlyphSun, Icon } from "./Icon";
 
-export function ThemeToggle() {
+/** `nav` is the full-width sidebar row; the default is the round icon button used on the payer page. */
+export function ThemeToggle({ variant = "icon" }: { variant?: "icon" | "nav" }) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="btn btn-secondary theme-btn"
+      className={variant === "nav" ? "nav-theme" : "btn btn-secondary theme-btn"}
       onClick={toggle}
       aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
     >
