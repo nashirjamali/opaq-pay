@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { HomeMenu } from "@/components/home/HomeMenu";
 import { AppPreview } from "@/components/home/AppPreview";
 import { HeroArt } from "@/components/home/HeroArt";
 import "./home.css";
@@ -36,7 +37,10 @@ export default function HomePage() {
       <a className="skip" href="#top">Skip to content</a>
       <header className="hp-nav">
         <div className="hp-nav-in">
-          <Link href="/" aria-label="Opaq Pay home" className="hp-logo"><Logo full /></Link>
+          <div className="hp-left">
+            <HomeMenu />
+            <Link href="/" aria-label="Opaq Pay home" className="hp-logo"><Logo full /></Link>
+          </div>
           <nav aria-label="Sections" className="hp-links">
             <a href="#how-it-works">How it works</a>
             <a href="#public">What is public</a>
