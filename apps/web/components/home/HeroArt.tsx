@@ -1,3 +1,4 @@
+import { UsdcMark } from "../TokenMarks";
 export function HeroArt() {
   return (
     <div className="art-frame" aria-hidden="true">
@@ -20,8 +21,8 @@ export function HeroArt() {
           <b>Payer</b>
           <span className="mono">9xQp…3tLw</span>
         </div>
-        <span className="art-coin">$</span>
-        <span className="art-pill">120.00 USDC</span>
+        <span className="art-coin"><UsdcMark size={28} /></span>
+        <span className="art-pill"><UsdcMark size={16} />120.00 USDC</span>
 
         <div className="art-shield">
           <div className="art-shield-mask">

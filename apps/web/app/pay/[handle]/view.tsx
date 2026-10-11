@@ -8,6 +8,8 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { CbCircle, CbIcon } from "@/components/CbIcon";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NEXT_CHAINS_LABEL } from "@/lib/chains";
+import { UsdcOnSolana } from "@/components/TokenMarks";
 import { getSolBalance, getVault, MIN_SOL_LAMPORTS, rpc, sendInstructions } from "@/lib/opaq/chain";
 import { config, WALLET_CHAIN } from "@/lib/opaq/env";
 import { formatUsdc } from "@/lib/format";
@@ -181,8 +183,8 @@ export function PayView({ handle }: { handle: string }) {
                 />
               </div>
               <div className="seg" role="group" aria-label="Pay from">
-                <button type="button" aria-pressed="true">Solana USDC</button>
-                <button type="button" aria-pressed="false" disabled>More chains, soon</button>
+                <button type="button" aria-pressed="true"><UsdcOnSolana />Solana USDC</button>
+                <button type="button" aria-pressed="false" disabled title={`Next: ${NEXT_CHAINS_LABEL}`}>More chains, soon</button>
               </div>
 
               {!connected ? (

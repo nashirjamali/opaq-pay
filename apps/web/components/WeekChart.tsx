@@ -4,6 +4,7 @@ import { formatUsdc } from "@/lib/format";
 import type { Payment } from "@/lib/sample";
 import { useSession } from "@/lib/session";
 import { Amount } from "./Amount";
+import { UsdcLabel } from "./TokenMarks";
 
 const DAYS = [6, 5, 4, 3, 2, 1, 0];
 
@@ -23,7 +24,7 @@ export function WeekChart({ payments }: { payments: Payment[] }) {
     <figure className="card chart">
       <figcaption>
         <h2>Received in the last 7 days</h2>
-        <p className="chart-total num"><Amount value={total} /> <span className="muted">USDC</span></p>
+        <p className="chart-total num"><Amount value={total} /> <span className="muted"><UsdcLabel size={16} /></span></p>
       </figcaption>
       <div className="bars" role="img" aria-label={summary}>
         {perDay.map((n, i) => (

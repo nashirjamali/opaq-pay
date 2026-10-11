@@ -8,6 +8,7 @@ import { ErrorBanner, LoadingRows } from "@/components/DataStates";
 import { HeroPattern } from "@/components/HeroPattern";
 import { PageHead } from "@/components/PageHead";
 import { PaymentRow } from "@/components/PaymentRow";
+import { UsdcMark } from "@/components/TokenMarks";
 import { WeekChart } from "@/components/WeekChart";
 import { formatUsdc } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -44,7 +45,7 @@ export function OverviewView() {
           </div>
           <div className="amount num" aria-busy={loading}>
             {loading ? <span className="ph hero-ph" role="img" aria-label="Loading balance" /> : failed ? <span className="muted-hero">Unavailable</span> : <BalanceFigure value={balance} />}
-            <small className="token"><span className="coin" aria-hidden="true">$</span>USDC</small>
+            <small className="token"><UsdcMark size={24} />USDC</small>
           </div>
           <p className="hero-sub">
             {loading

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { SolanaMark, UsdcOnSolana } from "@/components/TokenMarks";
+import { HomeMenu } from "@/components/home/HomeMenu";
 import { AppPreview } from "@/components/home/AppPreview";
 import { HeroArt } from "@/components/home/HeroArt";
 import "./home.css";
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
 const STEPS = [
   { icon: "/home/page/step-account.svg", title: "Create your handle", body: "Sign in with a Solana wallet. Opaq derives your private keys from one signature and registers your handle." },
   { icon: "/home/page/step-deposited.svg", title: "Share your link", body: "Anyone can pay it. Each payment goes to a fresh one-time address that only you can find." },
-  { icon: "/home/page/step-privacy.svg", title: "Move it into your private balance", body: "The Opaq relayer pays the network fees. Afterwards the amount is hidden on chain." },
+  { icon: "/home/page/step-privacy.svg", title: "Move it into your private balance", body: "The Opaq relayer pays the network fees. Afterwards your balance is hidden on chain." },
   { icon: "/home/page/step-withdraw.svg", title: "Cash out when you want", body: "Send USDC 1:1 to any address you choose. You see what becomes public before you confirm.", soon: true },
 ] as const;
 
@@ -36,7 +38,10 @@ export default function HomePage() {
       <a className="skip" href="#top">Skip to content</a>
       <header className="hp-nav">
         <div className="hp-nav-in">
-          <Link href="/" aria-label="Opaq Pay home" className="hp-logo"><Logo full /></Link>
+          <div className="hp-left">
+            <HomeMenu />
+            <Link href="/" aria-label="Opaq Pay home" className="hp-logo"><Logo full /></Link>
+          </div>
           <nav aria-label="Sections" className="hp-links">
             <a href="#how-it-works">How it works</a>
             <a href="#public">What is public</a>
@@ -57,7 +62,7 @@ export default function HomePage() {
               <p className="hp-eyebrow">Private payments on Solana</p>
               <h1>Get paid in USDC without showing your wallet</h1>
               <p className="hp-lead">
-                Share a link. Each payment lands in a one-time address only you can find, so payers never see your wallet or your balance. An accountant can still get read-only access.
+                Share a link. Each payment lands in a one-time address only you can find, so payers never see your wallet or your balance. Read-only access for your accountant is planned, not available yet.
               </p>
               <div className="hp-cta">
                 <Link href="/overview?signin=1" className="btn btn-primary">Create account</Link>
@@ -65,7 +70,10 @@ export default function HomePage() {
               </div>
               <p className="hp-fine"><img className="for-light" src="/home/hero/icon-info.svg" alt="" /><img className="for-dark" src="/home/hero/icon-info-dark.svg" alt="" />The demo uses sample data. The payer&apos;s address and the amount they send are public; your wallet and balance are not.</p>
             </div>
-            <HeroArt />
+            <div className="hp-art-col">
+              <HeroArt />
+              <p className="hp-cap">Illustration. The addresses and amounts are examples.</p>
+            </div>
           </div>
         </section>
 
@@ -80,7 +88,6 @@ export default function HomePage() {
         <section className="hp-sec" id="how-it-works" aria-labelledby="how-h">
           <div className="hp-wrap">
             <div className="hp-head">
-              <p className="hp-eyebrow">How it works</p>
               <h2 id="how-h">From a link to your own wallet in four steps</h2>
             </div>
             <ol className="hp-steps">
@@ -101,18 +108,17 @@ export default function HomePage() {
           <img className="hp-bg-soft" src="/home/page/product-pattern.svg" alt="" />
           <div className="hp-wrap">
             <div className="hp-head">
-              <p className="hp-eyebrow">The app</p>
               <h2 id="app-h">See what came in, and move it when you are ready</h2>
               <p>One screen for your private balance, your payment link and every payment, with amounts you can hide in one click.</p>
             </div>
             <AppPreview />
+            <p className="hp-cap hp-cap-c">Sample data from the demo. <Link href="/overview">Open the live demo</Link> to use the real screen.</p>
           </div>
         </section>
 
         <section className="hp-sec" id="public" aria-labelledby="pub-h">
           <div className="hp-wrap">
             <div className="hp-head">
-              <p className="hp-eyebrow">Honest by design</p>
               <h2 id="pub-h">What anyone can see, and what stays yours</h2>
               <p>Private does not mean untraceable. Opaq is not a mixer: everything stays traceable to whoever holds your viewing key.</p>
             </div>
@@ -136,15 +142,14 @@ export default function HomePage() {
           <img className="hp-bg-lines" src="/home/page/bg-lines.svg" alt="" />
           <div className="hp-bg-diag" aria-hidden="true"><img src="/home/page/bg-pattern.svg" alt="" /></div>
           <div className="hp-wrap">
-            <div className="hp-head">
-              <p className="hp-eyebrow">What is next</p>
-              <h2 id="next-h">Built to grow with how you get paid</h2>
+            <div className="hp-head hp-head-left">
+              <h2 id="next-h">What is not built yet</h2>
               <p>Solana USDC works today on devnet. These are next, and they are not available yet.</p>
             </div>
             <div className="hp-two">
               <article className="hp-card hp-road">
                 <div className="hp-road-art" aria-hidden="true">
-                  <span className="hp-chain hp-chain-on"><b>Solana</b>Live on devnet</span>
+                  <span className="hp-chain hp-chain-on"><b><SolanaMark size={24} />Solana</b>Live on devnet</span>
                   <img src="/home/page/icon-arrow-right.svg" alt="" />
                   <span className="hp-chain hp-chain-off"><b>More chains</b>Next</span>
                 </div>
@@ -173,10 +178,8 @@ export default function HomePage() {
         <section className="hp-sec" id="platforms" aria-labelledby="plat-h">
           <div className="hp-wrap hp-plat">
             <div>
-              <p className="hp-eyebrow">For platforms</p>
-              <h2 id="plat-h">Three ways in</h2>
-              <p className="hp-lead">Use the app today, or build private payments into your own product. All three share the same one-time addresses and the same viewing keys.</p>
-              <Link href="/overview" className="btn btn-primary">Try the demo</Link>
+              <h2 id="plat-h">One way in today, two planned</h2>
+              <p className="hp-lead">Opaq Link works in the app today on devnet. Checkout and the SDK are not available yet. When they ship, all three will share the same one-time addresses and viewing keys.</p>
             </div>
             <ul className="hp-card hp-ways">
               <li><div><h3>Opaq Link</h3><p>A payment link and QR code for freelancers and creators.</p></div><span className="hp-tag hp-tag-dark">In the app today (devnet)</span></li>
@@ -194,7 +197,7 @@ export default function HomePage() {
             <img className="for-light" src="/home/page/icon-info.svg" alt="" /><img className="for-dark" src="/home/page/icon-info-dark.svg" alt="" />
             <div>
               <h2>Opaq Pay runs on Solana devnet</h2>
-              <p>Nothing here moves real funds yet. Try it, break it, tell us what you find.</p>
+              <p>Nothing here moves real funds yet.</p>
             </div>
           </aside>
 
@@ -204,13 +207,14 @@ export default function HomePage() {
             </div>
             <div>
               <h2 id="cta-h">Create your payment link</h2>
-              <p>Sign in with a Solana wallet, pick a handle, and share the link. It takes about a minute on devnet.</p>
+              <p>Sign in with a Solana wallet and pick a handle. Then share your link.</p>
               <Link href="/overview?signin=1" className="btn hp-btn-on">Create account</Link>
             </div>
-            <div className="hp-pay" aria-hidden="true">
+            <div className="hp-pay" aria-hidden="true" inert>
+              <span className="hp-tag hp-pay-tag">Example of what payers see</span>
               <span className="muted">Pay @yourhandle</span>
               <b>Choose an amount</b>
-              <div className="hp-seg"><span className="on">Solana USDC</span><span>More chains, soon</span></div>
+              <div className="hp-seg"><span className="on"><UsdcOnSolana size={20} />Solana USDC</span><span>More chains, soon</span></div>
               <span className="btn btn-primary">Pay with wallet</span>
             </div>
           </section>
@@ -228,27 +232,18 @@ export default function HomePage() {
               <Logo full />
               <h2>Private payments on Solana.</h2>
               <p>Get paid in USDC without showing your wallet or balance to the people who pay you.</p>
-              <div className="hp-cta">
-                <Link href="/overview?signin=1" className="btn btn-primary btn-sm">Create account</Link>
-                <Link href="/overview" className="btn hp-btn-on btn-sm">Try the demo</Link>
-              </div>
             </div>
             <nav aria-label="Product" className="hp-col"><h3>Product</h3>
               <Link href="/overview">Overview demo</Link><Link href="/receive">Receive</Link><Link href="/activity">Activity</Link>
-              <Link href="/cashout">Cash out (soon)</Link><Link href="/reports">Reports (soon)</Link>
             </nav>
-            <nav aria-label="Developers" className="hp-col"><h3>Developers</h3>
-              <Link href="/receive">Opaq Link</Link><span>Opaq Checkout (soon)</span><span>Opaq SDK (soon)</span>
-            </nav>
-            <nav aria-label="Learn" className="hp-col"><h3>Learn</h3>
+            <nav aria-label="On this page" className="hp-col"><h3>On this page</h3>
               <a href="#how-it-works">How it works</a><a href="#public">What is public</a><a href="#next">What is next</a>
             </nav>
           </div>
           <div className="hp-foot-bot">
             <span>© 2026 Opaq Pay</span>
             <span className="hp-live"><img src="/home/page/devnet-dot.svg" alt="" />Running on Solana devnet</span>
-            <span>Terms of Service</span>
-            <span>Privacy Policy</span>
+            <span className="hp-foot-note">Devnet demo. Terms and a Privacy Policy will come before real funds.</span>
             <a href="#top" className="hp-top">Back to top <img className="for-light" src="/home/page/icon-arrow-up.svg" alt="" /><img className="for-dark" src="/home/page/icon-arrow-up-dark.svg" alt="" /></a>
           </div>
         </div>

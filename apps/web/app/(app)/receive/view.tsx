@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { CbIcon } from "@/components/CbIcon";
+import { NEXT_CHAINS_LABEL } from "@/lib/chains";
+import { UsdcOnSolana } from "@/components/TokenMarks";
 import { Logo } from "@/components/Logo";
 import { PageHead } from "@/components/PageHead";
 import { QrCode } from "@/components/QrCode";
@@ -63,8 +65,8 @@ export function ReceiveView() {
             <p className="payer-amount num">{amount.trim() ? `${amount.trim()} USDC` : "Choose an amount"}</p>
             {note.trim() && <p className="payer-note">{note.trim()}</p>}
             <div className="seg" role="group" aria-label="Pay from">
-              <button type="button" aria-pressed="true" tabIndex={-1}>Solana USDC</button>
-              <button type="button" aria-pressed="false" disabled tabIndex={-1}>More chains, soon</button>
+              <button type="button" aria-pressed="true" tabIndex={-1}><UsdcOnSolana />Solana USDC</button>
+              <button type="button" aria-pressed="false" disabled tabIndex={-1} title={`Next: ${NEXT_CHAINS_LABEL}`}>More chains, soon</button>
             </div>
             <button type="button" className="btn btn-primary" tabIndex={-1}>Pay with wallet</button>
             <p className="fine">Your address and the amount you send are public. @{handle} is not linked to your wallet or balance.</p>
