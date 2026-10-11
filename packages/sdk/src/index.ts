@@ -7,6 +7,7 @@ export * from './admin.js';
 export * from './scanner.js';
 export * from './indexer.js';
 export * from './relayer.js';
+export * from './cctp.js';
 
 export * as registry from './generated/registry/index.js';
 export * as vault from './generated/vault/index.js';

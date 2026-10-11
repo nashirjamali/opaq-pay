@@ -38,6 +38,8 @@ export type OpaqCluster = 'localnet' | 'devnet';
  */
 export const CHAINS = {
   solana: { status: 'available' },
+  // Circle CCTP source, proven end to end on testnet (`tests/scripts/cctp-proof.ts`).
+  arc: { status: 'available' },
   base: { status: 'planned' },
   arbitrum: { status: 'planned' },
 } as const;
