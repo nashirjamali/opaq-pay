@@ -61,7 +61,7 @@ export default function HomePage() {
               <p className="hp-eyebrow">Private payments on Solana</p>
               <h1>Get paid in USDC without showing your wallet</h1>
               <p className="hp-lead">
-                Share a link. Each payment lands in a one-time address only you can find, so payers never see your wallet or your balance. An accountant can still get read-only access.
+                Share a link. Each payment lands in a one-time address only you can find, so payers never see your wallet or your balance. Read-only access for your accountant is planned, not available yet.
               </p>
               <div className="hp-cta">
                 <Link href="/overview?signin=1" className="btn btn-primary">Create account</Link>
@@ -69,7 +69,10 @@ export default function HomePage() {
               </div>
               <p className="hp-fine"><img className="for-light" src="/home/hero/icon-info.svg" alt="" /><img className="for-dark" src="/home/hero/icon-info-dark.svg" alt="" />The demo uses sample data. The payer&apos;s address and the amount they send are public; your wallet and balance are not.</p>
             </div>
-            <HeroArt />
+            <div className="hp-art-col">
+              <HeroArt />
+              <p className="hp-cap">Illustration. The addresses and amounts are examples.</p>
+            </div>
           </div>
         </section>
 
@@ -110,6 +113,7 @@ export default function HomePage() {
               <p>One screen for your private balance, your payment link and every payment, with amounts you can hide in one click.</p>
             </div>
             <AppPreview />
+            <p className="hp-cap hp-cap-c">Sample data from the demo. <Link href="/overview">Open the live demo</Link> to use the real screen.</p>
           </div>
         </section>
 
@@ -178,8 +182,8 @@ export default function HomePage() {
           <div className="hp-wrap hp-plat">
             <div>
               <p className="hp-eyebrow">For platforms</p>
-              <h2 id="plat-h">Three ways in</h2>
-              <p className="hp-lead">Use the app today, or build private payments into your own product. All three share the same one-time addresses and the same viewing keys.</p>
+              <h2 id="plat-h">One way in today, two planned</h2>
+              <p className="hp-lead">Opaq Link works in the app today on devnet. Checkout and the SDK are not available yet. When they ship, all three will share the same one-time addresses and viewing keys.</p>
               <Link href="/overview" className="btn btn-primary">Try the demo</Link>
             </div>
             <ul className="hp-card hp-ways">
@@ -211,7 +215,8 @@ export default function HomePage() {
               <p>Sign in with a Solana wallet, pick a handle, and share the link. It takes about a minute on devnet.</p>
               <Link href="/overview?signin=1" className="btn hp-btn-on">Create account</Link>
             </div>
-            <div className="hp-pay" aria-hidden="true">
+            <div className="hp-pay" aria-hidden="true" inert>
+              <span className="hp-tag hp-pay-tag">Example of what payers see</span>
               <span className="muted">Pay @yourhandle</span>
               <b>Choose an amount</b>
               <div className="hp-seg"><span className="on">Solana USDC</span><span>More chains, soon</span></div>
@@ -251,8 +256,7 @@ export default function HomePage() {
           <div className="hp-foot-bot">
             <span>© 2026 Opaq Pay</span>
             <span className="hp-live"><img src="/home/page/devnet-dot.svg" alt="" />Running on Solana devnet</span>
-            <span>Terms of Service</span>
-            <span>Privacy Policy</span>
+            <span className="hp-foot-note">Devnet demo. Terms and a Privacy Policy will come before real funds.</span>
             <a href="#top" className="hp-top">Back to top <img className="for-light" src="/home/page/icon-arrow-up.svg" alt="" /><img className="for-dark" src="/home/page/icon-arrow-up-dark.svg" alt="" /></a>
           </div>
         </div>
