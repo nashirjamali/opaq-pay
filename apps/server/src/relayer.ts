@@ -1,6 +1,8 @@
 /**
  * The relayer: adds its fee-payer signature to client-built transactions (sweeps, shielding,
- * unshielding, cash-out, close) so stealth addresses never need SOL.
+ * unshielding, cash-out, close) so stealth addresses never need SOL. For a payer on another
+ * chain, who has no Solana wallet at all, it also pays for the announcement and for delivering
+ * the CCTP message that mints their USDC (ADR 0003).
  *
  * It signs a transaction only if, in order:
  *  1. the static checks in `checkRelayPolicy` pass: relayer is fee payer and nothing else it
@@ -13,7 +15,14 @@
  * The relayer must hold SOL only. Rent it fronts (wrapper accounts, proof accounts) comes
  * back through closes that the policy forces to pay the relayer.
  */
-import { vault, type OpaqPrograms } from '@opaq/sdk';
+import {
+  CCTP_MESSAGE_TRANSMITTER_PROGRAM_ADDRESS,
+  CCTP_RECEIVE_MESSAGE_DISCRIMINATOR,
+  CCTP_TOKEN_MESSENGER_MINTER_PROGRAM_ADDRESS,
+  registry,
+  vault,
+  type OpaqPrograms,
+} from '@opaq/sdk';
 import {
   getAddressDecoder,
   getBase64EncodedWireTransaction,
@@ -53,6 +62,10 @@ const TOKEN_2022_REALLOCATE = 29;
 const SYSTEM_CREATE_ACCOUNT = 0;
 const ZK_CLOSE_CONTEXT_STATE = 0;
 const COMPUTE_SET_UNIT_PRICE = 3;
+/** Positions in CCTP `receive_message`: `payer`, `caller`, then `receiver` at 5. Later accounts are handed on to the receiver. */
+const CCTP_PAYER_INDEX = 0;
+const CCTP_CALLER_INDEX = 1;
+const CCTP_RECEIVER_INDEX = 5;
 /** Priority fee cap, micro-lamports per compute unit. */
 const MAX_COMPUTE_UNIT_PRICE = 10_000n;
 
@@ -91,7 +104,12 @@ export async function checkRelayPolicy(transaction: Transaction, policy: RelayPo
     }
   }
 
-  const allowed = new Set<string>([...Object.values(PROGRAMS), policy.programs.vault]);
+  const allowed = new Set<string>([
+    ...Object.values(PROGRAMS),
+    policy.programs.vault,
+    policy.programs.registry,
+    CCTP_MESSAGE_TRANSMITTER_PROGRAM_ADDRESS,
+  ]);
   for (const [index, instruction] of message.instructions.entries()) {
     const program = accounts[instruction.programAddressIndex];
     if (!program || !allowed.has(program)) return { ok: false, reason: `instruction ${index}: program ${program} not allowed` };
@@ -146,6 +164,28 @@ export async function checkRelayPolicy(transaction: Transaction, policy: RelayPo
         const isWithdraw = equalBytes(data, vault.WITHDRAW_DISCRIMINATOR);
         if (!isDeposit && !isWithdraw) return fail('only vault deposit and withdraw are relayed');
         if (relayerAt.length > 0) return fail('relayer may not take part in vault instructions');
+        break;
+      }
+      case policy.programs.registry: {
+        // A payer on another chain announces with a throwaway key. The relayer never lends its
+        // name to an announcement, and handles are registered by their owners, not through here.
+        if (!equalBytes(data, registry.ANNOUNCE_DISCRIMINATOR)) return fail('only announce is relayed');
+        if (relayerAt.length > 0) return fail('relayer may not take part in registry instructions');
+        break;
+      }
+      case CCTP_MESSAGE_TRANSMITTER_PROGRAM_ADDRESS: {
+        if (!equalBytes(data, CCTP_RECEIVE_MESSAGE_DISCRIMINATOR)) return fail('only CCTP receive_message is relayed');
+        // The relayer funds the replay-protection account and is the `caller`: the attested message
+        // leaves no room for a second signature, and `caller` is a read-only signer that the program
+        // only compares with the message's `destinationCaller`. It must not be among the accounts
+        // handed on to the receiver, whose program is pinned so the message can only reach Circle's
+        // token messenger (a mint to the attested recipient).
+        if (relayerAt.some((i) => i !== CCTP_PAYER_INDEX && i !== CCTP_CALLER_INDEX)) {
+          return fail('relayer may only pay for and call the CCTP delivery');
+        }
+        if (ixAccounts[CCTP_RECEIVER_INDEX] !== CCTP_TOKEN_MESSENGER_MINTER_PROGRAM_ADDRESS) {
+          return fail('CCTP receiver must be the token messenger');
+        }
         break;
       }
     }

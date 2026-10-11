@@ -5,19 +5,23 @@ import {
   CCTP_MESSAGE_TRANSMITTER_PROGRAM_ADDRESS,
   CCTP_SOLANA_DOMAIN,
   createConfig,
+  createThrowawaySigner,
   decodeCctpBurnMessage,
   DEVNET_PROGRAMS,
   fetchCctpAttestation,
   fetchCctpTransferQuote,
+  findCctpUsedNoncePda,
   generateMetaKeys,
   getCctpAnnounceInstruction,
   getCctpDepositForBurnArgs,
   getCctpReceiveMessageInstruction,
   getCctpSourceChain,
   getPrepareCctpPaymentInstructions,
+  isCctpMessageReceived,
   OpaqConfigError,
   parseEnabledChains,
   scanAnnouncement,
+  verifySignature,
 } from '../src/index.js';
 
 const USDC = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU' as Address;
@@ -184,7 +188,15 @@ describe('after the burn', () => {
     expect(instruction.accounts.slice(2).map((a) => a.address)).toEqual(MINT_TX_ACCOUNTS);
     // Only the relayer signs: nothing else in the instruction can be made to pay or authorise.
     expect(instruction.accounts.filter((a) => a.role === AccountRole.WRITABLE_SIGNER || a.role === AccountRole.READONLY_SIGNER)).toHaveLength(2);
+    // It is the payer and the caller, and is not among the accounts handed on to the receiver.
+    expect(instruction.accounts.slice(2).some((a) => a.address === relayer.address)).toBe(false);
     expect(instruction.data).toHaveLength(8 + 4 + MESSAGE.length + 4 + ATTESTATION.length);
+  });
+
+  it('knows whether a message was already delivered', async () => {
+    expect(await findCctpUsedNoncePda(MESSAGE)).toBe(MINT_TX_ACCOUNTS[2]);
+    expect(await isCctpMessageReceived(rpcWith(null), MESSAGE)).toBe(false);
+    expect(await isCctpMessageReceived(rpcWith('AA=='), MESSAGE)).toBe(true);
   });
 
   it('refuses a token messenger account it cannot trust', async () => {
@@ -204,5 +216,16 @@ describe('after the burn', () => {
     const announce = await getCctpAnnounceInstruction({ announcer: relayer, payment, programs: DEVNET_PROGRAMS });
     expect(announce.programAddress).toBe(DEVNET_PROGRAMS.registry);
     expect(announce.accounts![0]).toMatchObject({ address: relayer.address, role: AccountRole.READONLY_SIGNER });
+  });
+});
+
+describe('throwaway signers', () => {
+  it('are different every time and sign like any ed25519 key', async () => {
+    const a = createThrowawaySigner();
+    const b = createThrowawaySigner();
+    expect(a.address).not.toBe(b.address);
+    const messageBytes = new Uint8Array([1, 2, 3]);
+    const [signatures] = await a.signTransactions([{ messageBytes, signatures: {} } as never]);
+    expect(verifySignature(new Uint8Array(signatures![a.address]!), messageBytes, a.address)).toBe(true);
   });
 });

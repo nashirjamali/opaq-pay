@@ -55,6 +55,11 @@ export async function loadPayments(keys: MetaKeys): Promise<LoadedPayments> {
       payments.push({ ...row, amount, amountKnown: true, status: "waiting" });
       continue;
     }
+    if (p.tokenAccountExists && !p.wrappedAccountExists) {
+      // Announced, with an empty USDC account and nothing swept: a payment from another chain whose
+      // USDC has not been delivered yet. It is not money until it arrives, so it is not listed.
+      continue;
+    }
     if (!p.wrappedAccountExists || !confidential) {
       // Nothing left at the stealth address: it was cashed out and closed.
       payments.push({ ...row, amount: 0, amountKnown: false, status: "out" });

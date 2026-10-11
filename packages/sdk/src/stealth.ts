@@ -124,6 +124,11 @@ export function scanAnnouncement(
   return pointToAddress(stealthPoint) === announcement.stealthAddress ? { tweak } : null;
 }
 
+/** A fresh random scalar (from a standard ed25519 seed), for a key that is used once and never stored. */
+export function generateScalar(): bigint {
+  return scalarFromSeed(randomBytes(32));
+}
+
 /** Recipient side, needs the spend seed: the private scalar controlling the stealth address. */
 export function deriveStealthScalar(spendSeed: Uint8Array, tweak: bigint): bigint {
   return (scalarFromSeed(spendSeed) + tweak) % ORDER;

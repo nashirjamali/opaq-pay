@@ -200,6 +200,11 @@ export type DetectedPayment = OwnPayment & {
   blockTime: number | null;
   /** Stealth USDC account the payer paid into. */
   tokenAccount: Address;
+  /**
+   * False once a sweep has closed it. True with `amount` 0 and no wrapper account means the
+   * payment was announced but its funds have not arrived (a cross-chain payment still in flight).
+   */
+  tokenAccountExists: boolean;
   /** USDC waiting to be swept right now; 0n once swept. */
   amount: bigint;
   /** The stealth address's own wrapper-token account, where sweeps go by default. */
@@ -274,6 +279,7 @@ export async function resolvePayments(
     payments.push({
       ...payment,
       tokenAccount: addresses[2 * i]!,
+      tokenAccountExists: usdc.exists,
       amount: usdc.amount,
       wrappedTokenAccount: addresses[2 * i + 1]!,
       wrappedAccountExists: wrapped.exists,

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { CbIcon } from "@/components/CbIcon";
-import { NEXT_CHAINS_LABEL } from "@/lib/chains";
-import { UsdcOnSolana } from "@/components/TokenMarks";
+import { EVM_SOURCES, NEXT_CHAINS, NEXT_CHAINS_LABEL } from "@/lib/chains";
+import { UsdcMark, UsdcOnSolana } from "@/components/TokenMarks";
 import { Logo } from "@/components/Logo";
 import { PageHead } from "@/components/PageHead";
 import { QrCode } from "@/components/QrCode";
@@ -64,9 +64,14 @@ export function ReceiveView() {
             <p className="muted">Pay @{handle}</p>
             <p className="payer-amount num">{amount.trim() ? `${amount.trim()} USDC` : "Choose an amount"}</p>
             {note.trim() && <p className="payer-note">{note.trim()}</p>}
-            <div className="seg" role="group" aria-label="Pay from">
+            <div className="seg" role="group" aria-label="Pay from" style={{ flexWrap: "wrap" }}>
               <button type="button" aria-pressed="true" tabIndex={-1}><UsdcOnSolana />Solana USDC</button>
-              <button type="button" aria-pressed="false" disabled tabIndex={-1} title={`Next: ${NEXT_CHAINS_LABEL}`}>More chains, soon</button>
+              {EVM_SOURCES.map((chain) => (
+                <button key={chain.chain} type="button" aria-pressed="false" tabIndex={-1}><UsdcMark size={22} />{chain.name} USDC</button>
+              ))}
+              {NEXT_CHAINS.length > 0 && (
+                <button type="button" aria-pressed="false" disabled tabIndex={-1} title={`Next: ${NEXT_CHAINS_LABEL}`}>More chains, soon</button>
+              )}
             </div>
             <button type="button" className="btn btn-primary" tabIndex={-1}>Pay with wallet</button>
             <p className="fine">Your address and the amount you send are public. @{handle} is not linked to your wallet or balance.</p>

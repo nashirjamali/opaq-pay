@@ -56,6 +56,7 @@ services:
         NEXT_PUBLIC_OPAQ_CLUSTER: ${OPAQ_CLUSTER:-devnet}
         NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-https://api.devnet.solana.com}
         NEXT_PUBLIC_OPAQ_SERVER_URL: https://${API_DOMAIN:-api.opaq.nashir.tech}
+        NEXT_PUBLIC_OPAQ_ENABLED_CHAINS: ${NEXT_PUBLIC_OPAQ_ENABLED_CHAINS:-solana}
     networks: [opaq]
     labels:
       traefik.enable: "true"

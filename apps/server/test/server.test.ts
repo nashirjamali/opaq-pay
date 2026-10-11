@@ -13,11 +13,13 @@ import {
   TOKEN_PROGRAM_ADDRESS,
 } from '@solana-program/token';
 import {
+  AccountRole,
   appendTransactionMessageInstructions,
   createNoopSigner,
   createTransactionMessage,
   generateKeyPairSigner,
   getBase64EncodedWireTransaction,
+  getTransactionDecoder,
   partiallySignTransactionMessageWithSigners,
   pipe,
   sequentialInstructionPlan,
@@ -26,18 +28,25 @@ import {
   type Address,
   type Instruction,
   type KeyPairSigner,
+  type TransactionSigner,
 } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  CCTP_MESSAGE_TRANSMITTER_PROGRAM_ADDRESS,
+  CCTP_RECEIVE_MESSAGE_DISCRIMINATOR,
+  CCTP_TOKEN_MESSENGER_MINTER_PROGRAM_ADDRESS,
   createIndexerClient,
   createRelayerClient,
   createStealthSigner,
+  createThrowawaySigner,
   deriveStealthScalar,
   fetchMetaAddress,
   fetchVaultSettings,
   generateMetaKeys,
+  getCctpAnnounceInstruction,
   getInitVaultInstruction,
   getPayToMetaAddressInstructions,
+  getPrepareCctpPaymentInstructions,
   getProposeAdminInstruction,
   getRegisterHandleInstruction,
   getRelayerSigner,
@@ -45,6 +54,7 @@ import {
   getWithdrawFromVaultInstruction,
   LOCALNET_PROGRAMS,
   RelayerRejectedError,
+  scanForPayments,
   scanIndexerForPayments,
   sendPlanViaRelayer,
   vault,
@@ -63,7 +73,7 @@ import { startTestNet, type TestNet } from '../../../tests/helpers.js';
 import { createApp } from '../src/app.js';
 import { createDb, migrate, type Db } from '../src/db.js';
 import { createIndexer, type Indexer } from '../src/indexer.js';
-import { createRelayer } from '../src/relayer.js';
+import { checkRelayPolicy, createRelayer } from '../src/relayer.js';
 import { startPostgres } from './postgres.js';
 
 const PAYMENT = 10_000_000n;
@@ -307,3 +317,104 @@ describe('relayer', () => {
     );
   });
 });
+
+describe('relayer for a payer on another chain', () => {
+  // The payer has no Solana wallet: the relayer pays, and throwaway keys fill the signer slots.
+  const relayerSigner = () => createNoopSigner(relayerKey.address);
+
+  async function wire(instructions: Instruction[]) {
+    const { value: latestBlockhash } = await net.rpc.getLatestBlockhash().send();
+    const message = pipe(
+      createTransactionMessage({ version: 0 }),
+      (m) => setTransactionMessageFeePayerSigner(relayerSigner(), m),
+      (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+      (m) => appendTransactionMessageInstructions(instructions, m),
+    );
+    return getBase64EncodedWireTransaction(await partiallySignTransactionMessageWithSigners(message));
+  }
+  const policyOf = async (instructions: Instruction[]) =>
+    checkRelayPolicy(getTransactionDecoder().decode(Buffer.from(await wire(instructions), 'base64')), {
+      relayer: relayerKey.address,
+      programs: LOCALNET_PROGRAMS,
+    });
+
+  /** The shape of CCTP `receive_message` that the policy looks at: payer, caller, receiver at 5, then the rest. */
+  async function cctpReceive(input: { payer: TransactionSigner; caller: TransactionSigner; receiver?: Address; handedOn?: Address; data?: number[] }): Promise<Instruction> {
+    const filler = async () => ({ address: (await generateKeyPairSigner()).address, role: AccountRole.READONLY });
+    return {
+      programAddress: CCTP_MESSAGE_TRANSMITTER_PROGRAM_ADDRESS,
+      accounts: [
+        { address: input.payer.address, role: AccountRole.WRITABLE_SIGNER, signer: input.payer },
+        { address: input.caller.address, role: AccountRole.READONLY_SIGNER, signer: input.caller },
+        await filler(),
+        await filler(),
+        { ...(await filler()), role: AccountRole.WRITABLE },
+        { address: input.receiver ?? CCTP_TOKEN_MESSENGER_MINTER_PROGRAM_ADDRESS, role: AccountRole.READONLY },
+        await filler(),
+        { address: input.handedOn ?? (await generateKeyPairSigner()).address, role: AccountRole.WRITABLE },
+      ],
+      data: new Uint8Array(input.data ?? [...CCTP_RECEIVE_MESSAGE_DISCRIMINATOR, 0, 0, 0, 0, 0, 0, 0, 0]),
+    } as Instruction;
+  }
+
+  it('creates the stealth USDC account and relays an announcement signed by a throwaway key', async () => {
+    const relayer = relayerClient();
+    const payer = await getRelayerSigner(relayer);
+    const recipient = generateMetaKeys();
+    const prepared = await getPrepareCctpPaymentInstructions({ accountPayer: payer, meta: recipient, mint: usdc });
+    const announce = await getCctpAnnounceInstruction({ announcer: createThrowawaySigner(), payment: prepared.payment });
+    await sendPlanViaRelayer({ rpc: net.rpc, relayer, plan: sequentialInstructionPlan([...prepared.instructions, announce]) });
+
+    // The recipient finds it before any funds arrive, and can tell that it is still in flight.
+    const scan = await scanForPayments(net.rpc, {
+      scanSeed: recipient.scanSeed,
+      spendPubkey: recipient.spendPubkey,
+      vault: settings,
+      includeSwept: true,
+      commitment: 'confirmed',
+    });
+    expect(scan.payments).toHaveLength(1);
+    expect(scan.payments[0]).toMatchObject({
+      stealthAddress: prepared.payment.stealthAddress,
+      tokenAccount: prepared.stealthTokenAccount,
+      tokenAccountExists: true,
+      amount: 0n,
+      wrappedAccountExists: false,
+    });
+  });
+
+  it('never announces in its own name and never registers handles', async () => {
+    const prepared = await getPrepareCctpPaymentInstructions({ accountPayer: relayerSigner(), meta: generateMetaKeys(), mint: usdc });
+    expect(await policyOf([await getCctpAnnounceInstruction({ announcer: relayerSigner(), payment: prepared.payment })])).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/may not take part in registry/),
+    });
+    const owner = await net.fundedSigner();
+    expect(await policyOf([await getRegisterHandleInstruction({ owner, name: 'relayed', meta: generateMetaKeys() })])).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/only announce is relayed/),
+    });
+  });
+
+  it('pays for a CCTP delivery as payer and caller, the only signer that fits', async () => {
+    const result = await policyOf([await cctpReceive({ payer: relayerSigner(), caller: relayerSigner() })]);
+    expect(result).toMatchObject({ ok: true, signatureCount: 1 });
+  });
+
+  it('refuses to be handed on to the CCTP receiver, or to reach another receiver', async () => {
+    expect(
+      await policyOf([await cctpReceive({ payer: relayerSigner(), caller: relayerSigner(), handedOn: relayerKey.address })]),
+    ).toMatchObject({ ok: false, reason: expect.stringMatching(/only pay for and call the CCTP delivery/) });
+    const evil = (await generateKeyPairSigner()).address;
+    expect(await policyOf([await cctpReceive({ payer: relayerSigner(), caller: relayerSigner(), receiver: evil })])).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/receiver must be the token messenger/),
+    });
+  });
+
+  it('refuses every other CCTP instruction', async () => {
+    const other = await cctpReceive({ payer: relayerSigner(), caller: relayerSigner(), data: [1, 2, 3, 4, 5, 6, 7, 8] });
+    expect(await policyOf([other])).toMatchObject({ ok: false, reason: expect.stringMatching(/only CCTP receive_message/) });
+  });
+});
+

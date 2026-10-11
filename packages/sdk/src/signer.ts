@@ -1,5 +1,5 @@
 import type { SignatureBytes, SignatureDictionary, TransactionPartialSigner } from '@solana/kit';
-import { addressFromScalar, signWithScalar } from './stealth.js';
+import { addressFromScalar, generateScalar, signWithScalar } from './stealth.js';
 
 /**
  * Kit signer for a stealth address, used to sign the sweep into `opaq_vault`.
@@ -17,4 +17,13 @@ export function createStealthSigner(scalar: bigint): TransactionPartialSigner {
       );
     },
   });
+}
+
+/**
+ * A signer with a random key that exists only for this call site. Use it where an instruction
+ * needs some signer but nobody's identity: the relayer pays the fee, and this key holds nothing
+ * and authorises nothing else (announcing for a payer on another chain, CCTP's `caller`).
+ */
+export function createThrowawaySigner(): TransactionPartialSigner {
+  return createStealthSigner(generateScalar());
 }
