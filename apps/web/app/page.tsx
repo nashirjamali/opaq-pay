@@ -87,7 +87,6 @@ export default function HomePage() {
         <section className="hp-sec" id="how-it-works" aria-labelledby="how-h">
           <div className="hp-wrap">
             <div className="hp-head">
-              <p className="hp-eyebrow">How it works</p>
               <h2 id="how-h">From a link to your own wallet in four steps</h2>
             </div>
             <ol className="hp-steps">
@@ -108,7 +107,6 @@ export default function HomePage() {
           <img className="hp-bg-soft" src="/home/page/product-pattern.svg" alt="" />
           <div className="hp-wrap">
             <div className="hp-head">
-              <p className="hp-eyebrow">The app</p>
               <h2 id="app-h">See what came in, and move it when you are ready</h2>
               <p>One screen for your private balance, your payment link and every payment, with amounts you can hide in one click.</p>
             </div>
@@ -120,7 +118,6 @@ export default function HomePage() {
         <section className="hp-sec" id="public" aria-labelledby="pub-h">
           <div className="hp-wrap">
             <div className="hp-head">
-              <p className="hp-eyebrow">Privacy limits</p>
               <h2 id="pub-h">What anyone can see, and what stays yours</h2>
               <p>Private does not mean untraceable. Opaq is not a mixer: everything stays traceable to whoever holds your viewing key.</p>
             </div>
@@ -144,8 +141,7 @@ export default function HomePage() {
           <img className="hp-bg-lines" src="/home/page/bg-lines.svg" alt="" />
           <div className="hp-bg-diag" aria-hidden="true"><img src="/home/page/bg-pattern.svg" alt="" /></div>
           <div className="hp-wrap">
-            <div className="hp-head">
-              <p className="hp-eyebrow">What is next</p>
+            <div className="hp-head hp-head-left">
               <h2 id="next-h">What is not built yet</h2>
               <p>Solana USDC works today on devnet. These are next, and they are not available yet.</p>
             </div>
@@ -181,7 +177,6 @@ export default function HomePage() {
         <section className="hp-sec" id="platforms" aria-labelledby="plat-h">
           <div className="hp-wrap hp-plat">
             <div>
-              <p className="hp-eyebrow">For platforms</p>
               <h2 id="plat-h">One way in today, two planned</h2>
               <p className="hp-lead">Opaq Link works in the app today on devnet. Checkout and the SDK are not available yet. When they ship, all three will share the same one-time addresses and viewing keys.</p>
             </div>

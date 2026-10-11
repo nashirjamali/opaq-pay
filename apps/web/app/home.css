@@ -353,3 +353,6 @@ img.for-dark { display: none; }
   :root[data-theme="dark"] .pv-shot .p.l { display: none; }
   :root[data-theme="dark"] .pv-shot .p.k { display: block; }
 }
+
+/* Section headers: only the hero keeps an eyebrow. The roadmap header is left-aligned so the sections do not all open the same way. */
+.hp-head-left { text-align: left; justify-items: start; margin-left: 0; max-width: none; }
