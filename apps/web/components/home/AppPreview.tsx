@@ -19,8 +19,36 @@ const BARS = [
 
 const DAYS = ["6d", "5d", "4d", "3d", "2d", "1d", "Today"];
 
+/** The same Overview as the phone shows it: menu button instead of a sidebar, one column. Used below 700px, where the desktop board would be unreadably small. */
+function PhonePreview() {
+  return (
+    <div className="ph" aria-hidden="true">
+      <div className="ph-head">
+        <span className="ph-menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2.5 5H17.5M2.5 10H17.5M2.5 15H17.5" /></svg></span>
+        <Logo />
+        <span className="ph-grow" />
+        <span className="ph-acct"><i>Y</i>@yourhandle</span>
+      </div>
+      <p className="ph-lead">Your private balance and what came in recently.</p>
+      <div className="ph-bal">
+        <span className="ph-top">Private balance</span>
+        <div className="ph-amt"><b>2,480</b><span>.50</span><em>USDC</em></div>
+        <p>$120.00 USDC arrived and is not in your private balance yet.</p>
+        <div className="ph-acts"><span className="ph-lime">Move to private balance</span><span>Cash out</span><span>Copy payment link</span></div>
+      </div>
+      <div className="ph-link">
+        <b>Your payment link</b>
+        <span className="ph-box">opaq.pay/pay/yourhandle</span>
+        <p>Anyone with this link can pay you. They see your handle, never your wallet or balance.</p>
+      </div>
+    </div>
+  );
+}
+
 export function AppPreview() {
   return (
+    <>
+    <PhonePreview />
     <div className="pv" aria-hidden="true">
       <div className="pv-frame">
         <div className="pv-board">
@@ -126,5 +154,6 @@ export function AppPreview() {
         </div>
       </div>
     </div>
+    </>
   );
 }
