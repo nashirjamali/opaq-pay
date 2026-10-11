@@ -230,7 +230,7 @@
 :root[data-theme="dark"] .hp-seg span:last-child { background: #26262c; }
 .hp-foot-outer { background: var(--hp-hero); padding: 64px 0; }
 .hp-foot { padding: 64px 64px 40px; border-radius: 20px; display: grid; gap: 56px; }
-.hp-foot-top { display: grid; grid-template-columns: 320px repeat(3, minmax(0, 1fr)); gap: 64px; }
+.hp-foot-top { display: grid; grid-template-columns: 320px repeat(2, minmax(0, 200px)); gap: 64px; justify-content: space-between; }
 .hp-foot-brand { display: grid; gap: 20px; justify-items: start; align-content: start; }
 .hp-foot-brand .logo-full { height: 50px; }
 .hp-foot-brand h2 { color: #fff; font-size: 24px; line-height: 1.5; letter-spacing: -0.01em; }
@@ -262,7 +262,7 @@
   .hp-steps { grid-template-columns: repeat(2, 1fr); }
   .hp-plat { grid-template-columns: 1fr; gap: 40px; }
   .hp-final { grid-template-columns: 1fr; gap: 32px; }
-  .hp-foot-top { grid-template-columns: repeat(3, 1fr); }
+  .hp-foot-top { grid-template-columns: repeat(2, 1fr); }
   .hp-foot-brand { grid-column: 1 / -1; }
 }
 @media (max-width: 860px) {

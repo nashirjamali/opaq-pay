@@ -146,7 +146,7 @@ export default function HomePage() {
           <div className="hp-wrap">
             <div className="hp-head">
               <p className="hp-eyebrow">What is next</p>
-              <h2 id="next-h">Built to grow with how you get paid</h2>
+              <h2 id="next-h">What is not built yet</h2>
               <p>Solana USDC works today on devnet. These are next, and they are not available yet.</p>
             </div>
             <div className="hp-two">
@@ -184,7 +184,6 @@ export default function HomePage() {
               <p className="hp-eyebrow">For platforms</p>
               <h2 id="plat-h">One way in today, two planned</h2>
               <p className="hp-lead">Opaq Link works in the app today on devnet. Checkout and the SDK are not available yet. When they ship, all three will share the same one-time addresses and viewing keys.</p>
-              <Link href="/overview" className="btn btn-primary">Try the demo</Link>
             </div>
             <ul className="hp-card hp-ways">
               <li><div><h3>Opaq Link</h3><p>A payment link and QR code for freelancers and creators.</p></div><span className="hp-tag hp-tag-dark">In the app today (devnet)</span></li>
@@ -237,19 +236,11 @@ export default function HomePage() {
               <Logo full />
               <h2>Private payments on Solana.</h2>
               <p>Get paid in USDC without showing your wallet or balance to the people who pay you.</p>
-              <div className="hp-cta">
-                <Link href="/overview?signin=1" className="btn btn-primary btn-sm">Create account</Link>
-                <Link href="/overview" className="btn hp-btn-on btn-sm">Try the demo</Link>
-              </div>
             </div>
             <nav aria-label="Product" className="hp-col"><h3>Product</h3>
               <Link href="/overview">Overview demo</Link><Link href="/receive">Receive</Link><Link href="/activity">Activity</Link>
-              <Link href="/cashout">Cash out (soon)</Link><Link href="/reports">Reports (soon)</Link>
             </nav>
-            <nav aria-label="Developers" className="hp-col"><h3>Developers</h3>
-              <Link href="/receive">Opaq Link</Link><span>Opaq Checkout (soon)</span><span>Opaq SDK (soon)</span>
-            </nav>
-            <nav aria-label="Learn" className="hp-col"><h3>Learn</h3>
+            <nav aria-label="On this page" className="hp-col"><h3>On this page</h3>
               <a href="#how-it-works">How it works</a><a href="#public">What is public</a><a href="#next">What is next</a>
             </nav>
           </div>
