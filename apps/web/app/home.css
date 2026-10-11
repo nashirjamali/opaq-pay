@@ -225,7 +225,7 @@
 .hp-seg .on { background: var(--p50); color: var(--brand-text); font-weight: 500; }
 :root[data-theme="dark"] .hp-seg { border-color: #32247f; }
 :root[data-theme="dark"] .hp-seg span:last-child { background: #26262c; }
-.hp-foot-outer { background: var(--hp-hero); padding-bottom: 64px; }
+.hp-foot-outer { background: var(--hp-hero); padding: 64px 0; }
 .hp-foot { padding: 64px 64px 40px; border-radius: 20px; display: grid; gap: 56px; }
 .hp-foot-top { display: grid; grid-template-columns: 320px repeat(3, minmax(0, 1fr)); gap: 64px; }
 .hp-foot-brand { display: grid; gap: 20px; justify-items: start; align-content: start; }
