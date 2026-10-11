@@ -4,10 +4,9 @@ import { getPayToMetaAddressInstructions, isValidHandleName, fetchMetaAddress, t
 import type { Address } from "@solana/kit";
 import type { Wallet, WalletAccount } from "@wallet-standard/base";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { CbCircle, CbIcon } from "@/components/CbIcon";
 import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { NEXT_CHAINS_LABEL } from "@/lib/chains";
 import { UsdcOnSolana } from "@/components/TokenMarks";
 import { getSolBalance, getVault, MIN_SOL_LAMPORTS, rpc, sendInstructions } from "@/lib/opaq/chain";
@@ -15,7 +14,7 @@ import { config, WALLET_CHAIN } from "@/lib/opaq/env";
 import { formatUsdc } from "@/lib/format";
 import { parseUnits } from "@/lib/units";
 import { explainError, lowSolMessage } from "@/lib/wallet/errors";
-import { connectWallet, createWalletSigner } from "@/lib/wallet/standard";
+import { connectWallet, createWalletSigner, recallWalletName, reconnectWallet, rememberWallet } from "@/lib/wallet/standard";
 import { useWallets } from "@/lib/wallet/useWallets";
 
 type Meta = { scanPubkey: Uint8Array; spendPubkey: Uint8Array };
@@ -76,11 +75,26 @@ export function PayView({ handle }: { handle: string }) {
     };
   }, [connected, mint]);
 
+  // Reconnect the wallet used last time without a prompt, so a reload does not undo the connection.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || connected) return;
+    const name = recallWalletName();
+    const wallet = name ? wallets.find((w) => w.name === name) : undefined;
+    if (!wallet) return;
+    restored.current = true;
+    void reconnectWallet(wallet).then((account) => {
+      if (account) setConnected((current) => current ?? { wallet, account });
+    });
+  }, [wallets, connected]);
+
   async function connect(wallet: Wallet) {
     setError("");
     setBusy("connecting");
     try {
-      setConnected({ wallet, account: await connectWallet(wallet) });
+      const account = await connectWallet(wallet);
+      rememberWallet(wallet.name);
+      setConnected({ wallet, account });
     } catch (e) {
       setError(explainError(e));
     } finally {
@@ -125,8 +139,6 @@ export function PayView({ handle }: { handle: string }) {
     <div className="pay-shell">
       <header className="top">
         <Logo />
-        <span className="grow" />
-        <ThemeToggle />
       </header>
       <main className="pay-main">
         <section className="payer pay-card" aria-labelledby="pay-title" aria-busy={lookup.state === "loading"}>

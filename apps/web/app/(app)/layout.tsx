@@ -4,12 +4,14 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { Header } from "@/components/Header";
 import { MoveDialog } from "@/components/MoveDialog";
 import { Nav } from "@/components/Nav";
+import { ThemeScope } from "@/components/ThemeScope";
 import { NavDrawerProvider } from "@/lib/navDrawer";
 import { SessionProvider } from "@/lib/session";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
+      <ThemeScope />
       <NavDrawerProvider>
       <a className="skip" href="#main">Skip to content</a>
       <div className="shell">

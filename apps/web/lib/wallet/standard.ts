@@ -41,6 +41,36 @@ export async function connectWallet(wallet: Wallet): Promise<WalletAccount> {
   return account;
 }
 
+const LAST_WALLET_KEY = "opaq:wallet";
+
+/** Remembers which wallet was used (its name is public) so the next visit can reconnect without a prompt. */
+export function rememberWallet(name: string): void {
+  try {
+    localStorage.setItem(LAST_WALLET_KEY, name);
+  } catch {
+    /* storage can be blocked; the person picks the wallet again */
+  }
+}
+
+export function recallWalletName(): string | null {
+  try {
+    return localStorage.getItem(LAST_WALLET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Reconnects a wallet the person already approved for this site. Never opens a prompt; null if it cannot. */
+export async function reconnectWallet(wallet: Wallet): Promise<WalletAccount | null> {
+  try {
+    const feature = wallet.features["standard:connect"] as StandardConnectFeature["standard:connect"];
+    const { accounts } = await feature.connect({ silent: true });
+    return accounts.find((a) => a.features.includes("solana:signMessage")) ?? accounts[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function signWalletMessage(wallet: Wallet, account: WalletAccount, message: Uint8Array): Promise<Uint8Array> {
   const feature = wallet.features["solana:signMessage"] as SolanaSignMessageFeature["solana:signMessage"];
   const [result] = await feature.signMessage({ account, message });

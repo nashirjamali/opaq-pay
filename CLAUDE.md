@@ -168,7 +168,8 @@ JS workspaces:
 Next.js (App Router) on `@opaq/sdk`. UI direction: `DESIGN.md`, wireframe in `docs/design/wireframe/`.
 
 - Accounts are Wallet Standard wallets (Phantom, Solflare, any Solana wallet). `lib/opaq/account.ts`: the wallet signs
-  `KEY_DERIVATION_MESSAGE`, the SDK derives the meta keys from the signature, and the keys live in memory only. Signing
+  `KEY_DERIVATION_MESSAGE`, the SDK derives the meta keys from the signature, and the keys live in memory and in this tab's `sessionStorage` (`lib/opaq/persist.ts`, so a reload keeps the
+  session; cleared on sign out or when the tab closes; re-checked against the chain on restore). Signing
   in again gives the same keys; a remembered handle is trusted only after `fetchMetaAddress` matches those keys.
 - Registering a handle is signed and paid by the user's wallet (the relayer allowlist does not cover it) and records that
   wallet as the handle's public owner. The UI says so. Google sign-in is shown as coming soon until the embedded wallet
@@ -180,6 +181,8 @@ Next.js (App Router) on `@opaq/sdk`. UI direction: `DESIGN.md`, wireframe in `do
   needs the relayer (`NEXT_PUBLIC_OPAQ_SERVER_URL`), signs only with derived stealth keys (no wallet prompt), reads
   chain state first so a retry resumes, and polls after each step because reads default to finalized commitment.
   The protocol fee (`vault.feeBps`) is shown before confirming and only applies to USDC not yet in the vault.
+- Dark mode exists only inside the app (`components/ThemeScope.tsx`); the landing page and `/pay/[handle]` are always light.
+  The payer page reconnects the last-used wallet silently (`reconnectWallet`).
 - `/pay/[handle]` is the payer page: looks up the handle, connects a wallet, pays with `getPayToMetaAddressInstructions`.
 - `lib/opaq/cashout.ts` + `/cashout` send everything held to one Solana address: sweep what is unswept, unshield what
   is private, `getCashOutInstructions`, then close the emptied stealth account (best effort). Same rules as the move:
