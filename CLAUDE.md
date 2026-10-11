@@ -93,6 +93,9 @@ JS workspaces:
   to test resuming.
 - `pnpm --filter @opaq/web check:cashout` – with `dev-net` running: drives the web app's own `lib/opaq` code without a
   browser (two payments, one moved to private, then cash out everything) and checks amounts and end state.
+- `pnpm --filter @opaq/web check:crosschain` – with an Opaq server running against devnet (relayer on): drives the web
+  app's cross-chain code with a real burn on a testnet EVM chain (`OPAQ_CCTP_SOURCE`, default `arc`; key from
+  `OPAQ_EVM_KEYFILE`), delivery through the relayer, and a recipient scan. Spends testnet USDC.
 - `pnpm --filter @opaq/sdk build && pnpm --filter @opaq/server start` – run the server (env: `.env.example`)
 - `RELAYER_KEYPAIR_FILE=… docker compose -f apps/server/compose.yaml up -d --build` – Postgres + server
   in Docker against devnet (port 8787; the key file stays on the host, mounted read-only). Export
@@ -117,6 +120,8 @@ JS workspaces:
   spend scalar, ed25519 signing from a raw scalar. Spec + test vector: `docs/stealth-address-spec.md`.
   Any change to derivation or domain tags needs a version bump, a new vector, and review.
 - `src/signer.ts` – `createStealthSigner(scalar)`: Kit `TransactionPartialSigner` for sweeps.
+  `createThrowawaySigner()`: a random key for an instruction that needs some signer but nobody's identity
+  (the announcement of a payer on another chain, with the relayer as fee payer).
 - `src/builders.ts` – instruction builders for the flow; they return instructions only, callers pick
   fee payer and send:
   - `getRegisterHandleInstruction`, `fetchMetaAddress(rpc, name)`
@@ -133,7 +138,8 @@ JS workspaces:
   IDs. `fetchVaultSettings` returns `programAddress`, which the sweep/withdraw builders reuse.
 - `src/scanner.ts` – `fetchAnnouncements` (pages `getSignaturesForAddress` on the registry's event
   authority), `extractAnnouncements`, `scanForPayments` (scan key only; cursor via `until`/`before`;
-  reports USDC still to sweep plus the stealth wrapper account and its public amount),
+  reports USDC still to sweep plus the stealth wrapper account and its public amount; `tokenAccountExists`
+  with nothing in it and no wrapper account means announced but not funded yet),
   `getStealthTokenBalance`. Also `getCreateWrappedTokenAccountInstruction`,
   `getWithdrawFromVaultInstruction` (owner = stealth signer for stealth accounts) and `getCashOutInstructions`
   (creates the recipient wallet's USDC account with the relayer paying, then withdraws there) in builders.
@@ -158,9 +164,10 @@ JS workspaces:
   Sepolia), `getPrepareCctpPaymentInstructions` (one-time address + its USDC account, which must exist before
   the mint; returns `mintRecipient`), `fetchCctpTransferQuote`, `getCctpDepositForBurnArgs`,
   `fetchCctpAttestation` / `waitForCctpAttestation`, `decodeCctpBurnMessage`,
-  `getCctpReceiveMessageInstruction` (hand-built from Circle's IDL; nearly fills a transaction, send it
-  alone), `getCctpAnnounceInstruction` (relayer announces for the EVM payer). The attestation API is
-  untrusted: check the decoded `mintRecipient` before paying to deliver a message.
+  `getCctpReceiveMessageInstruction` (hand-built from Circle's IDL; `payer` is also the `caller`, because the
+  message leaves no room for a second signature: send it alone), `isCctpMessageReceived`,
+  `getCctpAnnounceInstruction` (announcer = a throwaway signer when sent through the relayer). The attestation
+  API is untrusted: check the decoded `mintRecipient` before paying to deliver a message.
 - `src/generated/{registry,vault}` – Codama clients, exported as `registry` and `vault`.
 
 ## Web app (`apps/web`)
@@ -184,6 +191,13 @@ Next.js (App Router) on `@opaq/sdk`. UI direction: `DESIGN.md`, wireframe in `do
 - Dark mode exists only inside the app (`components/ThemeScope.tsx`); the landing page and `/pay/[handle]` are always light.
   The payer page reconnects the last-used wallet silently (`reconnectWallet`).
 - `/pay/[handle]` is the payer page: looks up the handle, connects a wallet, pays with `getPayToMetaAddressInstructions`.
+  With `NEXT_PUBLIC_OPAQ_ENABLED_CHAINS=solana,arc` and a relayer it also offers the enabled EVM chains
+  (`lib/chains.ts` `EVM_SOURCES`): EVM wallets are found with EIP-6963 (`lib/evm/wallets.ts`), and
+  `lib/opaq/crosschain.ts` runs the payment with viem: relayer creates the stealth USDC account and relays the
+  announcement (first, so a burn can never land somewhere the recipient cannot find), wallet approves and burns,
+  then `finishCrossChainPayment` waits for the attestation and has the relayer deliver it. The burn is kept in
+  `localStorage` (public data only) so a reload finishes it without a wallet. The recipient's list skips payments
+  that are announced but not funded yet.
 - `lib/opaq/cashout.ts` + `/cashout` send everything held to one Solana address: sweep what is unswept, unshield what
   is private, `getCashOutInstructions`, then close the emptied stealth account (best effort). Same rules as the move:
   relayer required, stealth keys only, resumes after a failure. The page states what becomes public before sending and
@@ -200,6 +214,10 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
 - `src/relayer.ts` – `checkRelayPolicy` (static allowlist; relayer may only pay fees/rent and receive
   refunds) + simulation cost cap + daily budget + per-client rate limit. Any new client flow that
   goes through the relayer must pass this policy; extend it deliberately, with a negative test.
+  For payers on another chain (ADR 0003) it also relays registry `announce` (never with the relayer as an
+  account, never `register_handle`) and CCTP `receive_message` (relayer only as payer and caller, receiver
+  pinned to Circle's token messenger, never among the accounts handed on). It does not check whose USDC a
+  delivered message mints, so anyone can have it deliver a CCTP transfer to Solana within the cost caps.
 - The relayer key holds SOL only and must be funded from a treasury unrelated to any user.
 - RPC calls retry on 429, and relaying is idempotent: the relayer signs first (deterministic
   ed25519), and if that signature already landed it returns it instead of resending. Upstream
@@ -228,9 +246,12 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
   chain (`OPAQ_CCTP_SOURCE`, default `arc`, where gas is paid in USDC) → attestation → relayer mints into the
   stealth USDC account → relayer announces → scan → sweep. Same `OPAQ_SMOKE_DIR`; the payer key comes from
   `OPAQ_EVM_KEYFILE`. Resumes a burn that was not minted yet. Passed 2026-10-10 and 2026-10-11 from Arc Testnet
-  (attested in 4 s); `base` is wired but has never been run. It uses a local relayer key: the server's relay
-  policy does not allow `receive_message` or a relayer-signed `announce` yet. Those runs funded the relayer
-  from the recipient wallet (faucet was down), so they prove the route, not unlinkability.
+  (attested in 4 s); `base` is wired but has never been run. It uses a local relayer key. Those runs funded
+  the relayer from the recipient wallet (faucet was down), so they prove the route, not unlinkability.
+- The live devnet server and web app need a redeploy for cross-chain payments: the server for the relay policy
+  above, the web app with `NEXT_PUBLIC_OPAQ_ENABLED_CHAINS=solana,arc`. Checked on 2026-10-11 against a local
+  server on devnet with `check:crosschain` (Arc Testnet, 33 s end to end); the payer page itself has not been
+  clicked through in a browser with an EVM wallet yet.
 - The public devnet RPC returns 429 on proof-heavy plans; the scripts back off and treat
   "already processed" after a retry as success.
 
@@ -272,7 +293,7 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
 - ADR 0001: private balances = Token-2022 CT on stealth-owned wrapper accounts; no consolidation in the MVP.
 - ADR 0002: `apps/server` indexer (scalable scanning) and one shared, policy-checked relayer.
 - ADR 0003 (proposed): cross-chain payments = CCTP V2 burn → mint into the stealth USDC account; the relayer
-  creates the account, delivers the message and announces.
+  pays for the account, the announcement (signed by a throwaway key, sent before the burn) and the delivery.
 
 ## Open decisions
 

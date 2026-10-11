@@ -334,7 +334,7 @@ async function findPda(programAddress: Address, ...seeds: (string | ReadonlyUint
 }
 
 /** Anchor discriminator of `message_transmitter_v2::receive_message`. */
-const RECEIVE_MESSAGE_DISCRIMINATOR = [38, 144, 127, 225, 31, 225, 238, 25];
+export const CCTP_RECEIVE_MESSAGE_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([38, 144, 127, 225, 31, 225, 238, 25]);
 /** Anchor discriminator of the token messenger's `TokenMessenger` account. */
 const TOKEN_MESSENGER_DISCRIMINATOR = [162, 4, 242, 52, 147, 243, 221, 96];
 /** `TokenMessenger`: discriminator, denylister, owner, pending_owner, u32, u8, then `fee_recipient`. */
@@ -352,12 +352,24 @@ export type CctpReceiveMessageInstruction = {
   data: Uint8Array;
 };
 
+/** The replay-protection account of a message; it exists once the message has been delivered. */
+export async function findCctpUsedNoncePda(message: Uint8Array): Promise<Address> {
+  return findPda(CCTP_MESSAGE_TRANSMITTER_PROGRAM_ADDRESS, 'used_nonce', decodeCctpBurnMessage(message).nonce);
+}
+
+/** True when the message was already delivered to Solana (by anyone): the USDC has been minted. */
+export async function isCctpMessageReceived(rpc: Rpc<GetAccountInfoApi>, message: Uint8Array): Promise<boolean> {
+  return (await fetchEncodedAccount(rpc, await findCctpUsedNoncePda(message))).exists;
+}
+
 /**
  * Delivers an attested burn message to Solana, which mints the USDC into the message's
  * `mintRecipient`. `payer` (the relayer) pays the fee and the rent of the replay-protection
  * account. Account order follows Circle's `solana-cctp-contracts` (`examples/v2/solana.ts`).
  *
- * The instruction leaves almost no room in the transaction: send it on its own.
+ * `payer` is also CCTP's `caller`, which only has to be some signer because the burn left
+ * `destinationCaller` open. A second signer does not fit: the attested message nearly fills the
+ * transaction, so send this instruction on its own, with `payer` as the fee payer.
  */
 export async function getCctpReceiveMessageInstruction(
   rpc: Rpc<GetAccountInfoApi>,
@@ -400,7 +412,7 @@ export async function getCctpReceiveMessageInstruction(
       { address: input.payer.address, role: AccountRole.READONLY_SIGNER, signer: input.payer }, // caller
       readonly(await findPda(transmitter, 'message_transmitter_authority', encoder.encode(messenger))),
       readonly(await findPda(transmitter, 'message_transmitter')),
-      writable(await findPda(transmitter, 'used_nonce', decoded.nonce)),
+      writable(await findCctpUsedNoncePda(input.message)),
       readonly(messenger), // receiver
       readonly(SYSTEM_PROGRAM_ADDRESS),
       readonly(await findPda(transmitter, '__event_authority')),
@@ -419,7 +431,7 @@ export async function getCctpReceiveMessageInstruction(
       readonly(messenger),
     ],
     data: new Uint8Array([
-      ...RECEIVE_MESSAGE_DISCRIMINATOR,
+      ...CCTP_RECEIVE_MESSAGE_DISCRIMINATOR,
       ...u32le(input.message.length),
       ...input.message,
       ...u32le(input.attestation.length),
