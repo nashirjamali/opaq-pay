@@ -8,6 +8,7 @@ import { validateHandle } from "@/lib/handle";
 import { checkHandle, deriveKeys, recallHandle, registerHandle, rememberHandle } from "@/lib/opaq/account";
 import { getSolBalance, MIN_SOL_LAMPORTS, requestTestSol } from "@/lib/opaq/chain";
 import { config, WALLET_CHAIN } from "@/lib/opaq/env";
+import { PRIVY_WALLET_NAME } from "@/lib/privy/wallet";
 import { getPrivyState, getServerPrivyState, privyEnabled, subscribePrivy } from "@/lib/privy/store";
 import { ACTION_LABEL, useSession } from "@/lib/session";
 import { explainError, lowSolMessage } from "@/lib/wallet/errors";
@@ -171,6 +172,7 @@ export function AuthDialog() {
   }
 
   const why = authAction ? `You need an account to ${ACTION_LABEL[authAction]}.` : "You need an account to receive payments.";
+  const google = walletName === PRIVY_WALLET_NAME;
   const waiting = step === "connecting" || step === "signing" || step === "registering";
 
   return (
@@ -224,17 +226,21 @@ export function AuthDialog() {
       {waiting && (
         <div className="dlg" aria-busy="true">
           <h2 id="auth-title">
-            {step === "connecting" && `Connect ${walletName}`}
+            {step === "connecting" && (google ? "Signing you in" : `Connect ${walletName}`)}
             {step === "signing" && "Create your private keys"}
             {step === "registering" && "Register your handle"}
           </h2>
           <span className="ph" aria-hidden="true" style={{ height: 10, width: "40%" }} />
           <p role="status">
-            {step === "connecting" && `Approve the connection in ${walletName}.`}
+            {step === "connecting" && (google ? "Just a moment." : `Approve the connection in ${walletName}.`)}
             {step === "signing" &&
-              `Sign the message in ${walletName}. It creates your private payment keys. It costs nothing and sends nothing to the network.`}
+              (google
+                ? "Creating your private payment keys. It costs nothing and sends nothing to the network."
+                : `Sign the message in ${walletName}. It creates your private payment keys. It costs nothing and sends nothing to the network.`)}
             {step === "registering" &&
-              `Approve the transaction in ${walletName}. It records @${handleName.trim().toLowerCase()} and your wallet address on chain, and uses a small amount of SOL for rent and the network fee.`}
+              (google
+                ? `Registering @${handleName.trim().toLowerCase()} on chain with your wallet address. It uses a small amount of SOL for rent and the network fee.`
+                : `Approve the transaction in ${walletName}. It records @${handleName.trim().toLowerCase()} and your wallet address on chain, and uses a small amount of SOL for rent and the network fee.`)}
           </p>
           <button type="button" className="btn btn-quiet" onClick={closeAuth}>
             Cancel

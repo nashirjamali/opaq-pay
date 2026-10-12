@@ -53,7 +53,13 @@ function Bridge() {
             signMessage: async (message) =>
               (await signMessage({ message, wallet: embedded, options: { uiOptions: { showWalletUIs: false } } })).signature,
             signTransaction: async (transaction, chain) =>
-              (await signTransaction({ transaction, wallet: embedded, chain: privyChain(chain) })).signedTransaction,
+              (await signTransaction({
+                transaction,
+                wallet: embedded,
+                chain: privyChain(chain),
+                // The person already confirmed in our own dialog, which would cover Privy's.
+                options: { uiOptions: { showWalletUIs: false } },
+              })).signedTransaction,
           })
         : null,
     [embedded, signMessage, signTransaction],
