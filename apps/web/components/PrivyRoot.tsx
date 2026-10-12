@@ -2,9 +2,20 @@
 
 import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { useSignMessage, useSignTransaction, useWallets } from "@privy-io/react-auth/solana";
+import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import { useEffect, useMemo, type ReactNode } from "react";
+import { RPC_URL } from "@/lib/opaq/env";
 import { PRIVY_APP_ID, setPrivyState } from "@/lib/privy/store";
 import { createPrivyWallet } from "@/lib/privy/wallet";
+
+// Privy needs an RPC for the chain it signs on. It only signs here (the app sends), and it knows no
+// local chain, so the local network is signed as "solana:devnet" against the same RPC.
+const SOLANA_RPCS = {
+  "solana:devnet": {
+    rpc: createSolanaRpc(RPC_URL),
+    rpcSubscriptions: createSolanaRpcSubscriptions(RPC_URL.replace(/^http/, "ws")),
+  },
+};
 
 /** Wraps the app in Privy when an app id is configured; otherwise renders the children unchanged. */
 export function PrivyRoot({ children }: { children: ReactNode }) {
@@ -16,6 +27,7 @@ export function PrivyRoot({ children }: { children: ReactNode }) {
         loginMethods: ["google"],
         // The embedded wallet is the account: its signature derives the private payment keys.
         embeddedWallets: { solana: { createOnLogin: "users-without-wallets" } },
+        solana: { rpcs: SOLANA_RPCS },
         appearance: { walletChainType: "solana-only", theme: "light" },
       }}
     >
@@ -41,7 +53,7 @@ function Bridge() {
             signMessage: async (message) =>
               (await signMessage({ message, wallet: embedded, options: { uiOptions: { showWalletUIs: false } } })).signature,
             signTransaction: async (transaction, chain) =>
-              (await signTransaction({ transaction, wallet: embedded, chain: chain as never })).signedTransaction,
+              (await signTransaction({ transaction, wallet: embedded, chain: privyChain(chain) })).signedTransaction,
           })
         : null,
     [embedded, signMessage, signTransaction],
@@ -52,4 +64,8 @@ function Bridge() {
     setPrivyState({ ready, wallet, label, login: () => login({ loginMethods: ["google"] }), logout });
   }, [ready, wallet, label, login, logout]);
   return null;
+}
+
+function privyChain(chain: string): "solana:mainnet" | "solana:devnet" | "solana:testnet" {
+  return chain === "solana:mainnet" || chain === "solana:testnet" ? chain : "solana:devnet";
 }
