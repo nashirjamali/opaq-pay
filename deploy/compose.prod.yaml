@@ -36,8 +36,10 @@ services:
       RELAYER_DAILY_LAMPORT_BUDGET: ${RELAYER_DAILY_LAMPORT_BUDGET:-2000000000}
       RELAYER_REQUESTS_PER_MINUTE: ${RELAYER_REQUESTS_PER_MINUTE:-60}
       TRUST_PROXY: "true"
+      SPONSOR_KEYPAIR_PATH: ${SPONSOR_KEYPAIR_FILE:+/run/secrets/sponsor.json}
     volumes:
       - ${RELAYER_KEYPAIR_FILE:?set RELAYER_KEYPAIR_FILE}:/run/secrets/relayer.json:ro
+      - ${SPONSOR_KEYPAIR_FILE:-/dev/null}:/run/secrets/sponsor.json:ro
     networks: [opaq]
     labels:
       traefik.enable: "true"

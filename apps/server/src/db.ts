@@ -39,6 +39,20 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       create index relay_log_created_at on relay_log (created_at);
     `,
   },
+  {
+    version: 2,
+    sql: `
+      create table sponsor_log (
+        id bigserial primary key,
+        address text not null unique,
+        signature text,
+        lamports bigint not null,
+        client text not null,
+        created_at timestamptz not null default now()
+      );
+      create index sponsor_log_created_at on sponsor_log (created_at);
+    `,
+  },
 ];
 
 export async function migrate(db: Db): Promise<void> {

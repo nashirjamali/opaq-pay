@@ -10,6 +10,7 @@ import { loadServerConfig } from './config.js';
 import { createDb, migrate } from './db.js';
 import { createIndexer } from './indexer.js';
 import { createRelayer } from './relayer.js';
+import { createSponsor } from './sponsor.js';
 
 const log = (message: string, extra: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ time: new Date().toISOString(), message, ...extra }));
@@ -34,10 +35,23 @@ const relayer =
       })
     : undefined;
 
+const sponsor =
+  config.sponsor.enabled && config.sponsor.secretKey
+    ? createSponsor({
+        rpc,
+        db,
+        signer: await createKeyPairSignerFromBytes(config.sponsor.secretKey),
+        lamportsPerWallet: config.sponsor.lamportsPerWallet,
+        dailyLamportBudget: config.sponsor.dailyLamportBudget,
+        requestsPerMinute: config.sponsor.requestsPerMinute,
+        log,
+      })
+    : undefined;
+
 const controller = new AbortController();
 const indexing = config.indexer.enabled ? indexer.run(config.indexer.pollMs, controller.signal) : Promise.resolve();
-const server = serve({ fetch: createApp({ db, indexer, ...(relayer ? { relayer } : {}), trustProxy: config.trustProxy }).fetch, port: config.port });
-log('listening', { port: config.port, cluster: config.opaq.cluster, relayer: relayer?.address ?? null, indexer: config.indexer.enabled });
+const server = serve({ fetch: createApp({ db, indexer, ...(relayer ? { relayer } : {}), ...(sponsor ? { sponsor } : {}), trustProxy: config.trustProxy }).fetch, port: config.port });
+log('listening', { port: config.port, cluster: config.opaq.cluster, relayer: relayer?.address ?? null, sponsor: sponsor?.address ?? null, indexer: config.indexer.enabled });
 
 async function shutdown() {
   log('shutting down');

@@ -184,7 +184,7 @@ Next.js (App Router) on `@opaq/sdk`. UI direction: `DESIGN.md`, wireframe in `do
   derivation, handle registration and signing are the same code as for Phantom. It needs `NEXT_PUBLIC_PRIVY_APP_ID`;
   without one the button says coming soon. The key-derivation signature is requested twice and compared, because
   keys must be identical on every sign-in. A new wallet has no SOL, so on devnet/localnet registration first asks the
-  faucet (`requestTestSol`). Sign out also signs out of Privy.
+  server's one-time grant (`POST /v1/sponsor`), then the public faucet (`requestTestSol`). Sign out also signs out of Privy.
 - `lib/opaq/payments.ts`: `scanForPayments` over RPC, or `scanIndexerForPayments` when `NEXT_PUBLIC_OPAQ_SERVER_URL` is
   set. Matching is local with the scan key. Shielded amounts are decrypted in the browser with
   `fetchStealthWrappedBalance` (the confidential entry, zk-sdk WASM, loaded on demand via `lib/opaq/confidential.ts`).
@@ -222,6 +222,11 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
   account, never `register_handle`) and CCTP `receive_message` (relayer only as payer and caller, receiver
   pinned to Circle's token messenger, never among the accounts handed on). It does not check whose USDC a
   delivered message mints, so anyone can have it deliver a CCTP transfer to Solana within the cost caps.
+- `src/sponsor.ts` – `POST /v1/sponsor {address}`: sends `SPONSOR_LAMPORTS_PER_WALLET` (default 0.005 SOL) once per
+  address to a new wallet so it can pay for `register_handle` (the owner pays that rent; a relayer cannot). Own key
+  (`SPONSOR_KEYPAIR_PATH`), never the relayer's, because the relayer's history must not mention recipient wallets;
+  test networks only (the server refuses to start with a sponsor key on another cluster); daily budget and per-client
+  rate limit; off without a key.
 - The relayer key holds SOL only and must be funded from a treasury unrelated to any user.
 - RPC calls retry on 429, and relaying is idempotent: the relayer signs first (deterministic
   ed25519), and if that signature already landed it returns it instead of resending. Upstream
