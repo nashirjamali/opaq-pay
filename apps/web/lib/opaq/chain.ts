@@ -15,7 +15,7 @@ import {
   type TransactionSigner,
 } from "@solana/kit";
 import type { Address } from "@solana/kit";
-import { config, RPC_URL } from "./env";
+import { config, RPC_URL, SERVER_URL } from "./env";
 
 const AIRDROP_LAMPORTS = 50_000_000;
 
@@ -71,28 +71,32 @@ export async function sendInstructions(instructions: Instruction[], feePayer: Tr
 }
 
 /**
- * Asks the devnet or local faucet for a little SOL, so a brand-new wallet (a Google sign-up has none)
- * can register its handle. Returns whether the balance reached `MIN_SOL_LAMPORTS`; the public devnet
- * faucet is rate limited, so a failure is normal and the caller falls back to telling the person.
+ * Gets a brand-new wallet (a Google sign-up has none) enough SOL to register its handle. Tries the Opaq
+ * server's one-time grant first, then the public faucet, which is rate limited. Returns whether the
+ * balance reached `MIN_SOL_LAMPORTS`; a failure is normal and the caller tells the person what to do.
  */
 export async function requestTestSol(address: Address): Promise<boolean> {
-  try {
-    const response = await fetch(config.cluster === "localnet" ? RPC_URL.replace(/\/?$/, "/faucet") : RPC_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body:
-        config.cluster === "localnet"
-          ? JSON.stringify({ address })
-          : JSON.stringify({ jsonrpc: "2.0", id: 1, method: "requestAirdrop", params: [address, AIRDROP_LAMPORTS] }),
-    });
-    if (!response.ok) return false;
-    const deadline = Date.now() + 30_000;
-    while (Date.now() < deadline) {
+  const post = (url: string, body: unknown) =>
+    fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(
+      (r) => r.ok,
+      () => false,
+    );
+  let asked = SERVER_URL ? await post(`${SERVER_URL.replace(/\/$/, "")}/v1/sponsor`, { address }) : false;
+  if (!asked) {
+    asked =
+      config.cluster === "localnet"
+        ? await post(RPC_URL.replace(/\/?$/, "/faucet"), { address })
+        : await post(RPC_URL, { jsonrpc: "2.0", id: 1, method: "requestAirdrop", params: [address, AIRDROP_LAMPORTS] });
+  }
+  if (!asked) return false;
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    try {
       if ((await getSolBalance(address)) >= MIN_SOL_LAMPORTS) return true;
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch {
+      /* RPC hiccup: keep polling */
     }
-  } catch {
-    /* faucet down or rate limited */
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   return false;
 }

@@ -74,6 +74,7 @@ import { createApp } from '../src/app.js';
 import { createDb, migrate, type Db } from '../src/db.js';
 import { createIndexer, type Indexer } from '../src/indexer.js';
 import { checkRelayPolicy, createRelayer } from '../src/relayer.js';
+import { createSponsor } from '../src/sponsor.js';
 import { startPostgres } from './postgres.js';
 
 const PAYMENT = 10_000_000n;
@@ -418,3 +419,58 @@ describe('relayer for a payer on another chain', () => {
   });
 });
 
+
+describe('wallet sponsor', () => {
+  const GRANT = 5_000_000n;
+  let sponsorKey: KeyPairSigner;
+  let sponsorApp: ReturnType<typeof createApp>;
+  const grant = (address: unknown) =>
+    sponsorApp.request('http://opaq.test/v1/sponsor', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ address }),
+    });
+
+  beforeAll(async () => {
+    sponsorKey = await net.fundedSigner(1_000_000_000);
+    const sponsor = createSponsor({
+      rpc: net.rpc,
+      db,
+      signer: sponsorKey,
+      lamportsPerWallet: GRANT,
+      dailyLamportBudget: GRANT * 2n,
+      requestsPerMinute: 1000,
+    });
+    sponsorApp = createApp({ db, sponsor, trustProxy: false });
+  });
+
+  it('is off unless a sponsor is configured', async () => {
+    const response = await app.request('http://opaq.test/v1/sponsor', { method: 'POST', body: '{}' });
+    expect(response.status).toBe(404);
+  });
+
+  it('sends SOL to a new wallet once, and never from the relayer key', async () => {
+    const wallet = (await generateKeyPairSigner()).address;
+    const response = await grant(wallet);
+    expect(response.status).toBe(200);
+    expect((await net.rpc.getBalance(wallet, { commitment: 'confirmed' }).send()).value).toBe(GRANT);
+
+    const again = await grant(wallet);
+    expect(again.status).toBe(400);
+    expect((await net.rpc.getBalance(wallet, { commitment: 'confirmed' }).send()).value).toBe(GRANT);
+    expect(sponsorKey.address).not.toBe(relayerKey.address);
+  });
+
+  it('refuses bad input and wallets that already have SOL', async () => {
+    expect((await grant('not an address')).status).toBe(400);
+    expect((await grant(undefined)).status).toBe(400);
+    expect((await grant(customer.address)).status).toBe(400); // funded in setup
+  });
+
+  it('stops at the daily budget', async () => {
+    // The first test used one grant; one more fits, the next does not.
+    expect((await grant((await generateKeyPairSigner()).address)).status).toBe(200);
+    const over = await grant((await generateKeyPairSigner()).address);
+    expect(over.status).toBe(503);
+  });
+});

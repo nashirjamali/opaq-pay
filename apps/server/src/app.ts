@@ -5,21 +5,24 @@
  *   GET  /v1/announcements       ?after=<cursor>&limit=<1..1000>, every announcement (clients match locally)
  *   GET  /v1/relayer             { address } to use as fee payer
  *   POST /v1/relay               { transaction: base64 } → { signature }
+ *   POST /v1/sponsor             { address } → { signature, lamports }, a one-time SOL grant (test networks only)
  *
  * Full announcement pages never change, so they are served as immutable for CDN caching.
  */
 import type { AnnouncementJson } from '@opaq/sdk';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import type { Db } from './db.js';
 import type { Indexer } from './indexer.js';
 import { isRateLimited, RelayError, type Relayer } from './relayer.js';
+import type { Sponsor } from './sponsor.js';
 
 export type AppDeps = {
   db: Db;
   indexer?: Indexer;
   relayer?: Relayer;
+  sponsor?: Sponsor;
   trustProxy: boolean;
 };
 
@@ -27,6 +30,10 @@ const MAX_PAGE = 1000;
 
 export function createApp(deps: AppDeps) {
   const app = new Hono();
+  const clientOf = (c: Context) => {
+    const forwarded = deps.trustProxy ? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() : undefined;
+    return forwarded || (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)?.incoming?.socket?.remoteAddress || 'unknown';
+  };
   app.use('*', cors());
 
   app.get('/health', async (c) => {
@@ -75,13 +82,24 @@ export function createApp(deps: AppDeps) {
     if (!deps.relayer) return c.json({ error: 'relayer disabled' }, 404);
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body.transaction !== 'string') return c.json({ error: 'expected { transaction: base64 }' }, 400);
-    const forwarded = deps.trustProxy ? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() : undefined;
-    const client = forwarded || (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)?.incoming?.socket?.remoteAddress || 'unknown';
+    const client = clientOf(c);
     try {
       return c.json({ signature: await deps.relayer.relay(body.transaction, client) });
     } catch (error) {
       if (error instanceof RelayError) return c.json({ error: error.message }, error.status);
       // Relaying is idempotent, so telling the client to retry is safe.
+      if (isRateLimited(error)) return c.json({ error: 'upstream RPC is rate limiting, retry shortly' }, 503);
+      throw error;
+    }
+  });
+
+  app.post('/v1/sponsor', bodyLimit({ maxSize: 1024 }), async (c) => {
+    if (!deps.sponsor) return c.json({ error: 'sponsor disabled' }, 404);
+    const body = await c.req.json().catch(() => null);
+    try {
+      return c.json(await deps.sponsor.sponsor(body?.address, clientOf(c)));
+    } catch (error) {
+      if (error instanceof RelayError) return c.json({ error: error.message }, error.status);
       if (isRateLimited(error)) return c.json({ error: 'upstream RPC is rate limiting, retry shortly' }, 503);
       throw error;
     }
