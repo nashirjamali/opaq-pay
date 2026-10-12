@@ -64,6 +64,9 @@ export function AuthDialog() {
       /* the dialog just will not reopen by itself after a redirect */
     }
     resume.current = true;
+    // Close this dialog first: it is modal, so Privy's own modal would open behind it. The effect
+    // below reopens it once the Google sign-in comes back.
+    closeAuth();
     privy.login();
   }
 
@@ -179,7 +182,7 @@ export function AuthDialog() {
           <p>{why} The demo stays open without one.</p>
           <div className="stack" style={{ gap: 12 }}>
             {privyEnabled ? (
-              <button type="button" className="btn btn-primary" onClick={startGoogle} disabled={!privy.ready}>
+              <button type="button" className="btn btn-secondary" onClick={startGoogle} disabled={!privy.ready}>
                 <Icon as={GlyphGoogle} size={20} />
                 {privy.wallet ? `Continue as ${privy.label ?? "Google account"}` : "Continue with Google"}
               </button>
@@ -190,27 +193,22 @@ export function AuthDialog() {
                 <span className="soon-chip">Coming soon</span>
               </button>
             )}
-            {/* With Privy configured, Google is the only way in. Browser wallets stay as the fallback when it is not. */}
-            {!privyEnabled && (
-              <>
-                {wallets.map((w) => (
-                  <button key={w.name} type="button" className="btn btn-primary" onClick={() => pick(w)}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={w.icon} alt="" width={20} height={20} />
-                    Use {w.name}
-                  </button>
-                ))}
-                {wallets.length === 0 && (
-                  <p className="notice" role="status">
-                    <CbIcon name="no-wallet" size={18} />
-                    <span>
-                      No Solana wallet found in this browser. Install{" "}
-                      <a href="https://phantom.app/download" target="_blank" rel="noreferrer">Phantom</a> or{" "}
-                      <a href="https://solflare.com/download" target="_blank" rel="noreferrer">Solflare</a>, then reload this page.
-                    </span>
-                  </p>
-                )}
-              </>
+            {wallets.map((w) => (
+              <button key={w.name} type="button" className="btn btn-primary" onClick={() => pick(w)}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={w.icon} alt="" width={20} height={20} />
+                Use {w.name}
+              </button>
+            ))}
+            {wallets.length === 0 && (
+              <p className="notice" role="status">
+                <CbIcon name="no-wallet" size={18} />
+                <span>
+                  No Solana wallet found in this browser. Install{" "}
+                  <a href="https://phantom.app/download" target="_blank" rel="noreferrer">Phantom</a> or{" "}
+                  <a href="https://solflare.com/download" target="_blank" rel="noreferrer">Solflare</a>, then reload this page.
+                </span>
+              </p>
             )}
           </div>
           {error && <p className="err" role="alert">{error}</p>}
