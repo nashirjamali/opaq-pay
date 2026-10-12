@@ -2,6 +2,9 @@ import type { SolanaSignMessageFeature, SolanaSignTransactionFeature } from "@so
 import type { Wallet, WalletAccount } from "@wallet-standard/base";
 import type { StandardConnectFeature } from "@wallet-standard/features";
 
+/** Shown where a wallet's name is; the dialog words things differently for it (nothing to approve). */
+export const PRIVY_WALLET_NAME = "Google";
+
 export interface PrivySigner {
   address: string;
   signMessage: (message: Uint8Array) => Promise<Uint8Array>;
@@ -69,5 +72,5 @@ export function createPrivyWallet(signer: PrivySigner): Wallet {
         ),
     },
   };
-  return { version: "1.0.0", name: "Google", icon: ICON as never, chains: account.chains, features, accounts: [account] };
+  return { version: "1.0.0", name: PRIVY_WALLET_NAME, icon: ICON as never, chains: account.chains, features, accounts: [account] };
 }
