@@ -3,17 +3,20 @@
 import type { MetaKeys } from "@opaq/sdk";
 import type { Address } from "@solana/kit";
 import type { Wallet, WalletAccount } from "@wallet-standard/base";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { validateHandle } from "@/lib/handle";
 import { checkHandle, deriveKeys, recallHandle, registerHandle, rememberHandle } from "@/lib/opaq/account";
-import { getSolBalance, MIN_SOL_LAMPORTS } from "@/lib/opaq/chain";
+import { getSolBalance, MIN_SOL_LAMPORTS, requestTestSol } from "@/lib/opaq/chain";
 import { config, WALLET_CHAIN } from "@/lib/opaq/env";
+import { getPrivyState, getServerPrivyState, privyEnabled, subscribePrivy } from "@/lib/privy/store";
 import { ACTION_LABEL, useSession } from "@/lib/session";
 import { explainError, lowSolMessage } from "@/lib/wallet/errors";
 import { connectWallet, createWalletSigner, rememberWallet } from "@/lib/wallet/standard";
 import { useWallets } from "@/lib/wallet/useWallets";
 import { CbCircle, CbIcon } from "./CbIcon";
 import { GlyphGoogle, Icon } from "./Icon";
+
+const RESUME_KEY = "opaq:google-resume";
 
 type Step = "choose" | "connecting" | "signing" | "handle" | "checking" | "registering";
 
@@ -24,7 +27,7 @@ interface Pending {
 }
 
 export function AuthDialog() {
-  const { authOpen, authAction, authNonce, closeAuth, signIn } = useSession();
+  const { authOpen, authAction, authNonce, openAuth, closeAuth, signIn } = useSession();
   const wallets = useWallets();
   const ref = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState<Step>("choose");
@@ -32,6 +35,10 @@ export function AuthDialog() {
   const [walletName, setWalletName] = useState("your wallet");
   const [handleName, setHandleName] = useState("");
   const pending = useRef<Pending | null>(null);
+  const privy = useSyncExternalStore(subscribePrivy, getPrivyState, getServerPrivyState);
+  // Set when Google sign-in was started here, so the dialog carries on once Privy comes back (the
+  // sign-in can leave the page and return). Kept in sessionStorage for that reason.
+  const resume = useRef(false);
   // Each open gets a run id; a wallet prompt answered after the dialog closed is ignored.
   const run = useRef(0);
 
@@ -47,6 +54,40 @@ export function AuthDialog() {
     }
     if (!authOpen && d.open) d.close();
   }, [authOpen, authNonce]);
+
+  function startGoogle() {
+    setError("");
+    if (privy.wallet) return void pick(privy.wallet);
+    try {
+      sessionStorage.setItem(RESUME_KEY, "1");
+    } catch {
+      /* the dialog just will not reopen by itself after a redirect */
+    }
+    resume.current = true;
+    privy.login();
+  }
+
+  // Back from Google (same page or after a redirect): open the dialog and continue with the new wallet.
+  useEffect(() => {
+    if (!privy.wallet || step !== "choose") return;
+    let waiting = resume.current;
+    try {
+      waiting ||= sessionStorage.getItem(RESUME_KEY) === "1";
+    } catch {
+      /* no storage */
+    }
+    if (!waiting) return;
+    if (!authOpen) return openAuth("create");
+    resume.current = false;
+    try {
+      sessionStorage.removeItem(RESUME_KEY);
+    } catch {
+      /* no storage */
+    }
+    void pick(privy.wallet);
+    // `pick` only reads refs and setters, so it is safe to leave out.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [privy.wallet, authOpen, step]);
 
   function finish(p: Pending, handle: string) {
     rememberHandle(p.walletAccount.address, handle);
@@ -103,8 +144,12 @@ export function AuthDialog() {
         return;
       }
       if (check === "available") {
-        const lamports = await getSolBalance(p.walletAccount.address as Address);
+        let lamports = await getSolBalance(p.walletAccount.address as Address);
         if (!live()) return;
+        if (lamports < MIN_SOL_LAMPORTS && (await requestTestSol(p.walletAccount.address as Address))) {
+          if (!live()) return;
+          lamports = await getSolBalance(p.walletAccount.address as Address);
+        }
         if (lamports < MIN_SOL_LAMPORTS) {
           setError(lowSolMessage(lamports, config.cluster, "Registering a handle"));
           setStep("handle");
@@ -133,12 +178,18 @@ export function AuthDialog() {
           <h2 id="auth-title">Create your Opaq account</h2>
           <p>{why} The demo stays open without one.</p>
           <div className="stack" style={{ gap: 12 }}>
-            {/* Google sign-in needs an embedded wallet provider, which is still an open decision. */}
-            <button type="button" className="btn btn-secondary" disabled>
-              <Icon as={GlyphGoogle} size={20} />
-              Continue with Google
-              <span className="soon-chip">Coming soon</span>
-            </button>
+            {privyEnabled ? (
+              <button type="button" className="btn btn-secondary" onClick={startGoogle} disabled={!privy.ready}>
+                <Icon as={GlyphGoogle} size={20} />
+                {privy.wallet ? `Continue as ${privy.label ?? "Google account"}` : "Continue with Google"}
+              </button>
+            ) : (
+              <button type="button" className="btn btn-secondary" disabled>
+                <Icon as={GlyphGoogle} size={20} />
+                Continue with Google
+                <span className="soon-chip">Coming soon</span>
+              </button>
+            )}
             {wallets.map((w) => (
               <button key={w.name} type="button" className="btn btn-primary" onClick={() => pick(w)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}

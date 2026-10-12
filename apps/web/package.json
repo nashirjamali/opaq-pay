@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@opaq/sdk": "workspace:^",
+    "@privy-io/react-auth": "^3.48.1",
+    "@solana-program/memo": "^0.15.0",
     "@solana/kit": "^8.4.0",
     "@solana/wallet-standard-features": "^1.5.0",
     "@wallet-standard/app": "^1.1.1",

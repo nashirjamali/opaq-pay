@@ -179,8 +179,12 @@ Next.js (App Router) on `@opaq/sdk`. UI direction: `DESIGN.md`, wireframe in `do
   session; cleared on sign out or when the tab closes; re-checked against the chain on restore). Signing
   in again gives the same keys; a remembered handle is trusted only after `fetchMetaAddress` matches those keys.
 - Registering a handle is signed and paid by the user's wallet (the relayer allowlist does not cover it) and records that
-  wallet as the handle's public owner. The UI says so. Google sign-in is shown as coming soon until the embedded wallet
-  provider is chosen.
+  wallet as the handle's public owner. The UI says so. Google sign-in uses Privy's Solana embedded wallet
+  (`components/PrivyRoot.tsx`, `lib/privy/`): `createPrivyWallet` presents it as a Wallet Standard wallet, so key
+  derivation, handle registration and signing are the same code as for Phantom. It needs `NEXT_PUBLIC_PRIVY_APP_ID`;
+  without one the button says coming soon. The key-derivation signature is requested twice and compared, because
+  keys must be identical on every sign-in. A new wallet has no SOL, so on devnet/localnet registration first asks the
+  faucet (`requestTestSol`). Sign out also signs out of Privy.
 - `lib/opaq/payments.ts`: `scanForPayments` over RPC, or `scanIndexerForPayments` when `NEXT_PUBLIC_OPAQ_SERVER_URL` is
   set. Matching is local with the scan key. Shielded amounts are decrypted in the browser with
   `fetchStealthWrappedBalance` (the confidential entry, zk-sdk WASM, loaded on demand via `lib/opaq/confidential.ts`).
@@ -292,13 +296,13 @@ Hono + Postgres (`pg`, SQL migrations in `src/db.ts`, append-only). ADR 0002.
 
 - ADR 0001: private balances = Token-2022 CT on stealth-owned wrapper accounts; no consolidation in the MVP.
 - ADR 0002: `apps/server` indexer (scalable scanning) and one shared, policy-checked relayer.
+- Protocol fee: 0.5% (50 bps; the devnet deployment already uses it; the on-chain cap stays 1%).
+- Embedded wallet provider: Privy (Google login in the web app; `NEXT_PUBLIC_PRIVY_APP_ID`).
 - ADR 0003 (proposed): cross-chain payments = CCTP V2 burn → mint into the stealth USDC account; the relayer
   pays for the account, the announcement (signed by a throwaway key, sent before the burn) and the delivery.
 
 ## Open decisions
 
 - First EVM chain: Base or Arbitrum (Arc Testnet is only the proof chain; neither has been run yet).
-- Protocol fee: 0.5% or 1%.
-- Embedded wallet provider (Privy, Para, or Web3Auth).
 
 Record decisions as short ADRs in `docs/` and update this file.

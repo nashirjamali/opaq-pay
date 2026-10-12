@@ -17,6 +17,8 @@ import {
 import type { Address } from "@solana/kit";
 import { config, RPC_URL } from "./env";
 
+const AIRDROP_LAMPORTS = 50_000_000;
+
 export const rpc = createSolanaRpc(RPC_URL);
 
 /** Enough for the rent of a new account (a handle or a one-time token account) plus the network fee. */
@@ -66,4 +68,31 @@ export async function sendInstructions(instructions: Instruction[], feePayer: Tr
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   throw new Error("The transaction was sent but not confirmed in time. Check your wallet before trying again.");
+}
+
+/**
+ * Asks the devnet or local faucet for a little SOL, so a brand-new wallet (a Google sign-up has none)
+ * can register its handle. Returns whether the balance reached `MIN_SOL_LAMPORTS`; the public devnet
+ * faucet is rate limited, so a failure is normal and the caller falls back to telling the person.
+ */
+export async function requestTestSol(address: Address): Promise<boolean> {
+  try {
+    const response = await fetch(config.cluster === "localnet" ? RPC_URL.replace(/\/?$/, "/faucet") : RPC_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body:
+        config.cluster === "localnet"
+          ? JSON.stringify({ address })
+          : JSON.stringify({ jsonrpc: "2.0", id: 1, method: "requestAirdrop", params: [address, AIRDROP_LAMPORTS] }),
+    });
+    if (!response.ok) return false;
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      if ((await getSolBalance(address)) >= MIN_SOL_LAMPORTS) return true;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  } catch {
+    /* faucet down or rate limited */
+  }
+  return false;
 }
