@@ -64,6 +64,9 @@ export function AuthDialog() {
       /* the dialog just will not reopen by itself after a redirect */
     }
     resume.current = true;
+    // Close this dialog first: it is modal, so Privy's own modal would open behind it. The effect
+    // below reopens it once the Google sign-in comes back.
+    closeAuth();
     privy.login();
   }
 
