@@ -57,6 +57,7 @@ services:
         NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-https://api.devnet.solana.com}
         NEXT_PUBLIC_OPAQ_SERVER_URL: https://${API_DOMAIN:-api.opaq.nashir.tech}
         NEXT_PUBLIC_OPAQ_ENABLED_CHAINS: ${NEXT_PUBLIC_OPAQ_ENABLED_CHAINS:-solana}
+        NEXT_PUBLIC_PRIVY_APP_ID: ${NEXT_PUBLIC_PRIVY_APP_ID:-}
     networks: [opaq]
     labels:
       traefik.enable: "true"

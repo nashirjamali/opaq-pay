@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { cashOutPayments, type CashOutProgress } from "./opaq/cashout";
 import { checkHandle } from "./opaq/account";
 import { relayer } from "./opaq/env";
+import { getPrivyState } from "./privy/store";
 import { clearSession, loadSession, saveSession } from "./opaq/persist";
 import { loadPayments } from "./opaq/payments";
 import { movePaymentsToPrivate, type MoveProgress } from "./opaq/shield";
@@ -164,6 +165,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     clearSession();
+    void getPrivyState().logout().catch(() => {});
     setAccount(null);
     setRevealed(true);
     setDataState("ready");

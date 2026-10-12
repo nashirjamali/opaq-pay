@@ -2,6 +2,7 @@ import { AuthDialog } from "@/components/AuthDialog";
 import { AuthOnLoad } from "@/components/AuthOnLoad";
 import { DemoBanner } from "@/components/DemoBanner";
 import { Header } from "@/components/Header";
+import { PrivyRoot } from "@/components/PrivyRoot";
 import { MoveDialog } from "@/components/MoveDialog";
 import { Nav } from "@/components/Nav";
 import { ThemeScope } from "@/components/ThemeScope";
@@ -10,6 +11,7 @@ import { SessionProvider } from "@/lib/session";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
+    <PrivyRoot>
     <SessionProvider>
       <ThemeScope />
       <NavDrawerProvider>
@@ -29,5 +31,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AuthDialog />
       <MoveDialog />
     </SessionProvider>
+    </PrivyRoot>
   );
 }
